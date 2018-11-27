@@ -47,7 +47,7 @@ if [ ! -f $SERVICE_PATH/$SERVICE_NAME ]; then
 		echo -e "	   / __ )/ /   / __ \/ ____/ //_// ____/ __ \ "                 
 		echo -e "	  / __  / /   / / / / /   / ,<  / __/ / /_/ / "                 
 		echo -e "	 / /_/ / /___/ /_/ / /___/ /| |/ /___/ _, _/ "                  
-		echo -e "	/_____/_____/\____/\____/_/ |_/_____/_/ |_| v1.0 BETA${COLOR_CL}"   
+		echo -e "	/_____/_____/\____/\____/_/ |_/_____/_/ |_| v1.0 BETA${COLOR_CL} by @deividgdt"   
 		echo ""
 		echo "Youtube Ads Blocker: INSTALANDO..."; sleep 1
 		echo "Si mueve el script de directorio, ejecutelo con la opcion install de nuevo."; sleep .3
