@@ -4,6 +4,7 @@
 
 YTADSBLOCKER_VERSION="1.1"
 YTADSBLOCKER_LOG="/var/log/ytadsblocker.log"
+YTADSBLOCKER_URL="https://raw.githubusercontent.com/deividgdt/ytadsblocker/master/ytadsblocker.sh"
 DIR_LOG="/var/log"
 PI_LOG="/var/log/pihole.log"
 BLACKLST="/etc/pihole/blacklist.txt"
@@ -18,7 +19,7 @@ COLOR_Y="\e[33m"
 COLOR_G="\e[32m"
 COLOR_CL="\e[0m"
 
-function makeservice () {
+function Makeservice () {
 
 	cd $SERVICE_PATH && touch $SERVICE_NAME
 	cat > $SERVICE_NAME <<-EOF
@@ -36,7 +37,7 @@ WantedBy=multi-user.target
 
 }
 
-function install() {
+function Install() {
 
 if [ ! -f $SERVICE_PATH/$SERVICE_NAME ]; then
 		echo -e "${COLOR_R}__  ______  __  __________  ______  ______   ___    ____  _____"
@@ -56,7 +57,7 @@ if [ ! -f $SERVICE_PATH/$SERVICE_NAME ]; then
 		echo "Cada ${SLEEPTIME}s se leera $PI_LOG"; sleep 5
 		echo ""
 		echo -ne "Creando servicio..."; sleep 1
-		makeservice
+		Makeservice
 		echo "OK. Servicio creado."; sleep 2
 
 		echo -n "Cambiando el servicio para que arranque automaticamente..."
@@ -87,14 +88,14 @@ if [ ! -f $SERVICE_PATH/$SERVICE_NAME ]; then
 	else
 		echo "Youtube Ads Blocker ya instalado..."; sleep 1
 		echo -n "Regenerando servicio..."; sleep 2
-		makeservice
+		Makeservice
 		systemctl daemon-reload
 		echo "OK. Regenerado."
 	fi
 
 }
 
-function start() {
+function Start() {
 	
 	echo "Youtube Ads Blocker Iniciado"
 	echo "Puede revisar $YTADSBLOCKER_LOG para mas informacion"
@@ -112,12 +113,19 @@ function start() {
 				echo "[$(date "+%F %T")] Nuevo dominio añadido: $YTD" >> $YTADSBLOCKER_LOG
 			fi
 		done
+		COUNT=$(($COUNT + 1))
 		sleep $SLEEPTIME;
+		if [[ $COUNT -eq 360 ]]; then
+			VersionChecker
+			COUNT=0
+		else
+			continue;
+		fi
 	done
 
 }
 
-function stop() {
+function Stop() {
 
 	echo "Youtube Ads Blocker parado"
 	echo "[$(date "+%F %T")] Youtube Ads Blocker Parado" >> $YTADSBLOCKER_LOG
@@ -125,7 +133,7 @@ function stop() {
 
 }
 
-function uninstall() {
+function Uninstall() {
 
 	systemctl disable ytadsblocker
 	rm -f ${SERVICE_PATH}/${SERVICE_NAME}
@@ -134,15 +142,33 @@ function uninstall() {
 
 }
 
+function VersionChecker() {
+
+	NEW_VERSION=$(curl -0s $YTADSBLOCKER_URL | grep "YTADSBLOCKER_VERSION=" | cut -f2 -d"=" | sed 's,",,g')
+
+	echo "[$(date "+%F %T")] Comprobando si existe una nueva version." >> $YTADSBLOCKER_LOG
+
+	if [[ "${YTADSBLOCKER_VERSION}" != "${NEW_VERSION}" ]]; then
+		echo "[$(date "+%F %T")] Existe una nueva version: ${NEW_VERSION}. Versión actual: ${YTADSBLOCKER_VERSION}" >> $YTADSBLOCKER_LOG
+		echo "[$(date "+%F %T")] Se procederá a descargar la nueva versión." >> $YTADSBLOCKER_LOG
+		curl -0s $YTADSBLOCKER_URL > /tmp/${SCRIPT_NAME}.${NEW_VERSION}
+		echo "[$(date "+%F %T")] Nueva versión descargada. Actualizando." >> $YTADSBLOCKER_LOG
+		cat /tmp/${SCRIPT_NAME}.${NEW_VERSION} ./$SCRIPT_NAME
+		echo "[$(date "+%F %T")] Actualizando." >> $YTADSBLOCKER_LOG
+	else
+		echo "[$(date "+%F %T")] Nada por actualizar." >> $YTADSBLOCKER_LOG
+	fi
+}
+
 case "$1" in
 	"install")
-		install;;
+		Install;;
 	"start")
-		start;;
+		Start;;
 	"stop")
-		stop;;
+		Stop;;
 	"uninstall")
-		uninstall;;
+		Uninstall;;
 	*)
 		echo "Opcion no reconocida. Usa ./$SCRIPT_NAME [ install | start | stop | uninstall ]";;
 esac
