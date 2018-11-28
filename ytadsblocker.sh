@@ -2,7 +2,7 @@
 
 # Script desarrollado para bloquear publicidad de Youtube en Pi-hole
 
-YTADSBLOCKER_VERSION="1.0"
+YTADSBLOCKER_VERSION="1.1"
 YTADSBLOCKER_LOG="/var/log/ytadsblocker.log"
 DIR_LOG="/var/log"
 PI_LOG="/var/log/pihole.log"
