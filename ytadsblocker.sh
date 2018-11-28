@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Script desarrollado para bloquear publicidad de Youtube en Pi-hole
-# version 1.0 BETA
 
+YTADSBLOCKER_VERSION="1.0"
 YTADSBLOCKER_LOG="/var/log/ytadsblocker.log"
 DIR_LOG="/var/log"
 PI_LOG="/var/log/pihole.log"
@@ -47,7 +47,7 @@ if [ ! -f $SERVICE_PATH/$SERVICE_NAME ]; then
 		echo -e "	   / __ )/ /   / __ \/ ____/ //_// ____/ __ \ "                 
 		echo -e "	  / __  / /   / / / / /   / ,<  / __/ / /_/ / "                 
 		echo -e "	 / /_/ / /___/ /_/ / /___/ /| |/ /___/ _, _/ "                  
-		echo -e "	/_____/_____/\____/\____/_/ |_/_____/_/ |_| v1.0 BETA${COLOR_CL} by @deividgdt"   
+		echo -e "	/_____/_____/\____/\____/_/ |_/_____/_/ |_| v${YTADSBLOCKER_VERSION}${COLOR_CL} by @deividgdt"   
 		echo ""
 		echo "Youtube Ads Blocker: INSTALANDO..."; sleep 1
 		echo "Si mueve el script de directorio, ejecutelo con la opcion install de nuevo."; sleep .3
