@@ -131,8 +131,8 @@ function Start() {
 
 function Stop() {
 
-	echo "Youtube Ads Blocker Stoped"
-	echo "[$(date "+%F %T")] Youtube Ads Blocker Stoped" >> $YTADSBLOCKER_LOG
+	echo "Youtube Ads Blocker Stopped"
+	echo "[$(date "+%F %T")] Youtube Ads Blocker Stopped" >> $YTADSBLOCKER_LOG
 	kill -9 `pgrep ytadsblocker`
 
 }
