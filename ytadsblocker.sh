@@ -74,9 +74,9 @@ if [ ! -f $SERVICE_PATH/$SERVICE_NAME ]; then
 		echo "OK. Backup done."
 		
 		echo "[+] Adding googlevideo.com subdomains..."; sleep 1
-		ALL_DOMAINS=$(cat /tmp/pihole.log* | egrep "r([0-9]{1,2}).*\.googlevideo\.com" | awk '{print $8}' | sort | uniq)
+		ALL_DOMAINS=$(cat /tmp/pihole.log* | egrep "r([0-9]{1,2})[^-].*\.googlevideo\.com" | awk '{print $8}' | sort | uniq)
 		pihole -b $ALL_DOMAINS
-		N_DOM=$(cat /tmp/pihole.log* | egrep "r([0-9]{1,2}).*\.googlevideo\.com" | awk '{print $8}' | sort | uniq | wc -l)
+		N_DOM=$(cat /tmp/pihole.log* | egrep "r([0-9]{1,2})[^-].*\.googlevideo\.com" | awk '{print $8}' | sort | uniq | wc -l)
 		sudo pihole -g
 		echo " OK. $N_DOM subdomains added"
 		
@@ -106,7 +106,7 @@ function Start() {
 
 	while true; do
 		echo "[$(date "+%F %T")] Checking..." >> $YTADSBLOCKER_LOG
-		YT_DOMAINS=$(egrep "r([0-9]{1,2}).*\.googlevideo\.com" $PI_LOG | awk '{print $8}' | sort | uniq)
+		YT_DOMAINS=$(egrep "r([0-9]{1,2})[^-].*\.googlevideo\.com" $PI_LOG | awk '{print $8}' | sort | uniq)
 		CURRENT_DOMAINS=$(cat $BLACKLST)
 		NEW_DOMAINS=
 		for YTD in $YT_DOMAINS; do
@@ -115,8 +115,12 @@ function Start() {
 				echo "[$(date "+%F %T")] New subdomain to add: $YTD" >> $YTADSBLOCKER_LOG
 			fi
 		done
-		pihole -b $NEW_DOMAINS	
-		echo "[$(date "+%F %T")] All the new subdomains added." >> $YTADSBLOCKER_LOG
+		pihole -b $NEW_DOMAINS
+		if [ -z $NEW_DOMAINS ]; then
+			echo "[$(date "+%F %T")] No new subdomains to added." >> $YTADSBLOCKER_LOG
+		else
+			echo "[$(date "+%F %T")] All the new subdomains added." >> $YTADSBLOCKER_LOG
+		fi
 		COUNT=$(($COUNT + 1))
 		sleep $SLEEPTIME;
 		if [[ $COUNT -eq 360 ]]; then
@@ -143,7 +147,7 @@ function Uninstall() {
 	systemctl disable ytadsblocker
 	rm -f ${SERVICE_PATH}/${SERVICE_NAME}
 	rm -f $YTADSBLOCKER_LOG
-	egrep -v "r([0-9]{1,2}).*\.googlevideo\.com" ${BLACKLST} > ${BLACKLST}.new
+	egrep -v "r([0-9]{1,2})[^-].*\.googlevideo\.com" ${BLACKLST} > ${BLACKLST}.new
 	mv -f ${BLACKLST}.new ${BLACKLST}
 	pihole -g
 	echo "YouTube Ads Blocker Uninstalled"
