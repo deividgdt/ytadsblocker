@@ -2,7 +2,7 @@
 
 # This script was made in order to block all the Youtube's advertisement in Pi-Hole
 
-YTADSBLOCKER_VERSION="1.6"
+YTADSBLOCKER_VERSION="1.7"
 YTADSBLOCKER_LOG="/var/log/ytadsblocker.log"
 YTADSBLOCKER_URL="https://raw.githubusercontent.com/deividgdt/ytadsblocker/master/ytadsblocker.sh"
 DIR_LOG="/var/log"
@@ -74,9 +74,9 @@ if [ ! -f $SERVICE_PATH/$SERVICE_NAME ]; then
 		echo "OK. Backup done."
 		
 		echo "[+] Adding googlevideo.com subdomains..."; sleep 1
-		ALL_DOMAINS=$(cat /tmp/pihole.log* | egrep "r([0-9]{1,2})[^-].*\.googlevideo\.com" | awk '{print $8}' | sort | uniq)
+		ALL_DOMAINS=$(cat /tmp/pihole.log* | egrep -o "r([0-9]{1,2})[^-].*\.googlevideo\.com" /var/log/pihole.log | sort | uniq)
 		pihole -b $ALL_DOMAINS
-		N_DOM=$(cat /tmp/pihole.log* | egrep "r([0-9]{1,2})[^-].*\.googlevideo\.com" | awk '{print $8}' | sort | uniq | wc -l)
+		N_DOM=$(cat /tmp/pihole.log* | egrep -o "r([0-9]{1,2})[^-].*\.googlevideo\.com" /var/log/pihole.log | sort | uniq wc -l)
 		sudo pihole -g
 		echo " OK. $N_DOM subdomains added"
 		
@@ -106,7 +106,7 @@ function Start() {
 
 	while true; do
 		echo "[$(date "+%F %T")] Checking..." >> $YTADSBLOCKER_LOG
-		YT_DOMAINS=$(egrep "r([0-9]{1,2})[^-].*\.googlevideo\.com" $PI_LOG | awk '{print $8}' | sort | uniq)
+		YT_DOMAINS=$( egrep -o "r([0-9]{1,2})[^-].*\.googlevideo\.com" /var/log/pihole.log | sort | uniq)
 		CURRENT_DOMAINS=$(cat $BLACKLST)
 		NEW_DOMAINS=
 		for YTD in $YT_DOMAINS; do
