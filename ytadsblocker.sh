@@ -2,7 +2,7 @@
 
 # This script was made in order to block all the Youtube's advertisement in Pi-Hole
 
-YTADSBLOCKER_VERSION="1.7"
+YTADSBLOCKER_VERSION="1.8"
 YTADSBLOCKER_LOG="/var/log/ytadsblocker.log"
 YTADSBLOCKER_URL="https://raw.githubusercontent.com/deividgdt/ytadsblocker/master/ytadsblocker.sh"
 DIR_LOG="/var/log"
@@ -76,7 +76,7 @@ if [ ! -f $SERVICE_PATH/$SERVICE_NAME ]; then
 		echo "[+] Adding googlevideo.com subdomains..."; sleep 1
 		ALL_DOMAINS=$(cat /tmp/pihole.log* | egrep -o "r([0-9]{1,2})[^-].*\.googlevideo\.com" /var/log/pihole.log | sort | uniq)
 		pihole -b $ALL_DOMAINS
-		N_DOM=$(cat /tmp/pihole.log* | egrep -o "r([0-9]{1,2})[^-].*\.googlevideo\.com" /var/log/pihole.log | sort | uniq wc -l)
+		N_DOM=$(cat /tmp/pihole.log* | egrep -o "r([0-9]{1,2})[^-].*\.googlevideo\.com" /var/log/pihole.log | sort | uniq | wc -l)
 		sudo pihole -g
 		echo " OK. $N_DOM subdomains added"
 		
