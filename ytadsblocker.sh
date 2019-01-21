@@ -175,7 +175,7 @@ function Uninstall() {
 
 function VersionChecker() {
 
-	NEW_VERSION=$(curl -0s $YTADSBLOCKER_URL | egrep -x "YTADSBLOCKER_VERSION=\"[1-9]{1,2}\.[1-9]{1,2}\"" | cut -f2 -d"=" | sed 's,",,g')
+	NEW_VERSION=$(curl -0s $YTADSBLOCKER_URL | egrep -x "YTADSBLOCKER_VERSION=\"[1-9]{1,2}\.[0-9]{1,2}\"" | cut -f2 -d"=" | sed 's,",,g')
 
 	echo "[$(date "+%F %T")] Checking if there is any new version." >> $YTADSBLOCKER_LOG
 
