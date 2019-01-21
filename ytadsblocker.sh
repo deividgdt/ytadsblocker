@@ -2,18 +2,20 @@
 
 # This script was made in order to block all the Youtube's advertisement in Pi-Hole
 
-YTADSBLOCKER_VERSION="1.9"
+YTADSBLOCKER_VERSION="2.0"
 YTADSBLOCKER_LOG="/var/log/ytadsblocker.log"
 YTADSBLOCKER_URL="https://raw.githubusercontent.com/deividgdt/ytadsblocker/master/ytadsblocker.sh"
+VERSIONCHECKER_TIME="260"
+SLEEPTIME="240"
 DIR_LOG="/var/log"
 PI_LOG="/var/log/pihole.log"
 BLACKLST="/etc/pihole/blacklist.txt"
 BLACKLST_BKP="/etc/pihole/blacklist.txt.BKP"
-SLEEPTIME="240"
 SERVICE_PATH="/usr/lib/systemd/system"
 SERVICE_NAME="ytadsblocker.service"
 SCRIPT_NAME=$(basename $0)
 PRINTWD=$(pwd)
+
 COLOR_R="\e[31m"
 COLOR_Y="\e[33m"
 COLOR_G="\e[32m"
@@ -87,7 +89,7 @@ function Install() {
 		
 		N_DOM=$(cat /tmp/pihole.log* | egrep -o "r([0-9]{1,2})[^-].*\.googlevideo\.com" /var/log/pihole.log | sort | uniq | wc -l)
 		sudo pihole -g
-		echo " OK. $N_DOM subdomains added"
+		echo "[i] OK. $N_DOM subdomains added"
 		
 		echo -n "[+] Deleting temp..."; sleep 1
 		rm -f /tmp/pihole.log*
@@ -138,7 +140,7 @@ function Start() {
 		COUNT=$(($COUNT + 1))
 		sleep $SLEEPTIME;
 
-		if [[ $COUNT -eq 360 ]]; then
+		if [[ $COUNT -eq ${VERSIONCHECKER_TIME} ]]; then
 			VersionChecker
 			COUNT=0
 		else
@@ -173,7 +175,7 @@ function Uninstall() {
 
 function VersionChecker() {
 
-	NEW_VERSION=$(curl -0s $YTADSBLOCKER_URL | grep "YTADSBLOCKER_VERSION=" | cut -f2 -d"=" | sed 's,",,g')
+	NEW_VERSION=$(curl -0s $YTADSBLOCKER_URL | egrep -x "YTADSBLOCKER_VERSION=\"[1-9]{1,2}\.[1-9]{1,2}\"" | cut -f2 -d"=" | sed 's,",,g')
 
 	echo "[$(date "+%F %T")] Checking if there is any new version." >> $YTADSBLOCKER_LOG
 
@@ -188,9 +190,9 @@ function VersionChecker() {
 }
 
 case "$1" in
-	"install"   ) Install;;
-	"start"     ) Start;;
-	"stop"      ) Stop;;
-	"uninstall" ) Uninstall;;
+	"install"   ) Install 	;;
+	"start"     ) Start 	;;
+	"stop"      ) Stop 		;;
+	"uninstall" ) Uninstall ;;
 	*           ) echo "That option does not exists. Usage. /$SCRIPT_NAME [ install | start | stop | uninstall ]";;
 esac
