@@ -56,11 +56,12 @@ function Install() {
 		echo -e "	/_____/_____/\____/\____/_/ |_/_____/_/ |_| v${YTADSBLOCKER_VERSION}${COLOR_CL} by @deividgdt"   
 		echo ""
 		echo "[+] Youtube Ads Blocker: INSTALLING..."; sleep 1
-		echo "[i] If you move the file to some diferent place, please run it again with the 'install' option ";
-		echo "[i] You can check the logs at: $YTADSBLOCKER_LOG";
+		echo "[i] If you move the script to some different place, please run it again with the option 'install'";
+		echo "[i] You can check the logs in: $YTADSBLOCKER_LOG";
 		echo "[i] All the subdomains will be added to: $BLACKLST";
 		echo "[i] Every ${SLEEPTIME}s it reads: $PI_LOG"; sleep 3
-		echo ""
+		echo ""7
+		
 		echo -ne "[+] Installing the service..."; sleep 1
 		Makeservice
 		echo "OK. Service installed.";
@@ -175,7 +176,7 @@ function Uninstall() {
 
 function VersionChecker() {
 
-	NEW_VERSION=$(curl -0s $YTADSBLOCKER_URL | egrep -x "YTADSBLOCKER_VERSION=\"[1-9]{1,2}\.[0-9]{1,2}\"" | cut -f2 -d"=" | sed 's,",,g')
+	NEW_VERSION=$(curl -0s $YTADSBLOCKER_URL | egrep -x "YTADSBLOCKER_VERSION=\"[1-9]{1,2}\.[1-9]{1,2}\"" | cut -f2 -d"=" | sed 's,",,g')
 
 	echo "[$(date "+%F %T")] Checking if there is any new version." >> $YTADSBLOCKER_LOG
 
