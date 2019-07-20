@@ -2,24 +2,33 @@
 
 # This script was made in order to block all the Youtube's advertisement in Pi-Hole
 
-YTADSBLOCKER_VERSION="2.0"
+YTADSBLOCKER_VERSION="2.1"
 YTADSBLOCKER_LOG="/var/log/ytadsblocker.log"
-YTADSBLOCKER_URL="https://raw.githubusercontent.com/deividgdt/ytadsblocker/master/ytadsblocker.sh"
+YTADSBLOCKER_GIT="https://raw.githubusercontent.com/deividgdt/ytadsblocker/master/ytadsblocker.sh"
 VERSIONCHECKER_TIME="260"
 SLEEPTIME="240"
 DIR_LOG="/var/log"
 PI_LOG="/var/log/pihole.log"
 BLACKLST="/etc/pihole/blacklist.txt"
 BLACKLST_BKP="/etc/pihole/blacklist.txt.BKP"
-SERVICE_PATH="/usr/lib/systemd/system"
+SERVICE_PATH="/lib/systemd/system"
 SERVICE_NAME="ytadsblocker.service"
 SCRIPT_NAME=$(basename $0)
 PRINTWD=$(pwd)
 
+# The followings vars are used in order to give some color to
+# the different outputs of the script.
 COLOR_R="\e[31m"
 COLOR_Y="\e[33m"
 COLOR_G="\e[32m"
 COLOR_CL="\e[0m"
+
+# The followings vars are used to point out the different 
+# results of the process executed by the script
+TAGINFO=$(echo -e "[i]") # [i] Information
+TAGWARN=$(echo -e "[${COLOR_Y}w${COLOR_CL}]") # [w] Warning
+TAGERR=$(echo -e "[${COLOR_R}✗${COLOR_CL}]") # [✗] Error
+TAGOK=$(echo -e "[${COLOR_G}✓${COLOR_CL}]") # [✓] Ok
 
 #If any command shows out an error code, the script ends
 set -e
@@ -55,53 +64,65 @@ function Install() {
 		echo -e "	 / /_/ / /___/ /_/ / /___/ /| |/ /___/ _, _/ "                  
 		echo -e "	/_____/_____/\____/\____/_/ |_/_____/_/ |_| v${YTADSBLOCKER_VERSION}${COLOR_CL} by @deividgdt"   
 		echo ""
-		echo "[+] Youtube Ads Blocker: INSTALLING..."; sleep 1
-		echo "[i] If you move the script to some different place, please run it again with the option 'install'";
-		echo "[i] You can check the logs in: $YTADSBLOCKER_LOG";
-		echo "[i] All the subdomains will be added to: $BLACKLST";
-		echo "[i] Every ${SLEEPTIME}s it reads: $PI_LOG"; sleep 3
-		echo ""7
+		echo -e "${TAGINFO} Youtube Ads Blocker: INSTALLING..."; sleep 1
+		echo -e "${TAGINFO} If you move the script to a different place, please run it again with the option 'install'";
+		echo -e "${TAGINFO} You can check the logs in: $YTADSBLOCKER_LOG";
+		echo -e "${TAGINFO} All the subdomains will be added to: $BLACKLST";
+		echo -e "${TAGINFO} Every ${SLEEPTIME}s it reads: $PI_LOG"; sleep 3
+		echo ""
 		
-		echo -ne "[+] Installing the service..."; sleep 1
+		echo -ne "${TAGINFO} Installing the service..."; sleep 1
 		Makeservice
 		echo "OK. Service installed.";
 
-		echo -n "[+] Enabling the service to start it automatically with the OS."; sleep 1
+		echo -ne "${TAGINFO} Enabling the service to start it automatically with the OS."; sleep 1
 		systemctl enable ytadsblocker 1> /dev/null 2>&1
 		echo "OK."
 
-		echo "[+] Searching googlevideo.com subdomains inside the Pi-Hole's logs..."; sleep 1    
+		echo -e "${TAGINFO} Searching googlevideo.com subdomains inside the Pi-Hole's logs..."; sleep 1    
 		
-		cp $DIR_LOG/pihole.log.* /tmp
-		gunzip /tmp/pihole.log.*.gz
+		cp $DIR_LOG/pihole.log* /tmp
+		for GZIPFILE in $(ls /tmp/pihole.log*gz > /dev/null 2>&1); do 
+			gunzip $GZIPFILE; 
+		done
 		
-		echo -n "[+] Backing up the ${BLACKLST} file..."; sleep 1
-		cp $BLACKLST $BLACKLST_BKP
-		echo "OK. Backup done."
+		if [ -f "${BLACKLST}" ]; then
+			echo -ne "${TAGINFO} Backing up the ${BLACKLST} file..."; sleep 1
+			cp $BLACKLST $BLACKLST_BKP
+			echo "OK. Backup done."
+		else
+			echo -ne "${TAGINFO} Creating the ${BLACKLST} file..."; sleep 1
+			touch $BLACKLST
+			echo "OK. File created."
+		fi
 		
-		echo -n "[+] Adding googlevideo.com subdomains..."; sleep 1
+		echo -e "${TAGINFO} Adding googlevideo.com subdomains..."; sleep 1
 		ALL_DOMAINS=$(cat /tmp/pihole.log* | egrep -o "r([0-9]{1,2})[^-].*\.googlevideo\.com" /var/log/pihole.log | sort | uniq)
 		
-		for YTD in $ALL_DOMAINS; do
-			echo "[$(date "+%F %T")] New subdomain to add: $YTD" >> $YTADSBLOCKER_LOG 
-		done
+		if [ ! -z "${ALL_DOMAINS}" ]; then
+			for YTD in $ALL_DOMAINS; do
+				echo "[$(date "+%F %T")] New subdomain to add: $YTD" >> $YTADSBLOCKER_LOG 
+			done
 
-		pihole -b $ALL_DOMAINS
+			pihole -b $ALL_DOMAINS
+
+			N_DOM=$(cat /tmp/pihole.log* | egrep -o "r([0-9]{1,2})[^-].*\.googlevideo\.com" /var/log/pihole.log | sort | uniq | wc -l)
+			sudo pihole -g
+			echo -e "${TAGOK} OK. $N_DOM subdomains added"
+		else
+			echo -e "${TAGWARN} No subdomains to add at the moment."
+		fi
 		
-		N_DOM=$(cat /tmp/pihole.log* | egrep -o "r([0-9]{1,2})[^-].*\.googlevideo\.com" /var/log/pihole.log | sort | uniq | wc -l)
-		sudo pihole -g
-		echo "[i] OK. $N_DOM subdomains added"
-		
-		echo -n "[+] Deleting temp..."; sleep 1
+		echo -ne "${TAGINFO} Deleting temp..."; sleep 1
 		rm -f /tmp/pihole.log*
 		echo "OK. Temp deleted."; sleep 1
-		echo "[i] Youtube Ads Blocker: INSTALLED..."; sleep 1
+		echo -e "${TAGOK} Youtube Ads Blocker: INSTALLED..."; sleep 1
 		echo ""
-		echo "[i] To start the service execute as follows: systemctl start ytadsblocker"; sleep 1
+		echo -e "${TAGINFO} To start the service execute as follows: systemctl start ytadsblocker"; sleep 1
 
 	else
-		echo "[w] Youtube Ads Blocker already installed..."; sleep 1
-		echo -n "[+] Reinstalling the service..."; 
+		echo -e "${TAGWARN} Youtube Ads Blocker already installed..."; sleep 1
+		echo -ne "${TAGINFO} Reinstalling the service..."; 
 		Makeservice
 		systemctl daemon-reload
 		echo "OK. Reinstalled."
@@ -125,7 +146,7 @@ function Start() {
 		NEW_DOMAINS=
 		
 		for YTD in $YT_DOMAINS; do
-			if [[ ! $( grep "$YTD" $BLACKLST ) ]]; then
+			if [[ ! $( grep "$YTD" "$BLACKLST" ) ]]; then
 				NEW_DOMAINS="$NEW_DOMAINS $YTD"
 				echo "[$(date "+%F %T")] New subdomain to add: $YTD" >> $YTADSBLOCKER_LOG
 			fi
@@ -164,7 +185,7 @@ function Uninstall() {
 	echo "Uninstalling..."
 	systemctl disable ytadsblocker
 	rm -f ${SERVICE_PATH}/${SERVICE_NAME}
-	rm -f $YTADSBLOCKER_LOG
+	rm -f ${YTADSBLOCKER_LOG}
 	egrep -v "r([0-9]{1,2})[^-].*\.googlevideo\.com" ${BLACKLST} > ${BLACKLST}.new
 	mv -f ${BLACKLST}.new ${BLACKLST}
 	pihole -g
@@ -176,14 +197,14 @@ function Uninstall() {
 
 function VersionChecker() {
 
-	NEW_VERSION=$(curl -0s $YTADSBLOCKER_URL | egrep -x "YTADSBLOCKER_VERSION=\"[1-9]{1,2}\.[1-9]{1,2}\"" | cut -f2 -d"=" | sed 's,",,g')
+	NEW_VERSION=$(curl -0s $YTADSBLOCKER_GIT | egrep -x "YTADSBLOCKER_VERSION=\"[1-9]{1,2}\.[1-9]{1,2}\"" | cut -f2 -d"=" | sed 's,",,g')
 
 	echo "[$(date "+%F %T")] Checking if there is any new version." >> $YTADSBLOCKER_LOG
 
 	if [[ "${YTADSBLOCKER_VERSION}" != "${NEW_VERSION}" ]]; then
 		echo "[$(date "+%F %T")] There is a new version: ${NEW_VERSION}. Current version: ${YTADSBLOCKER_VERSION}" >> $YTADSBLOCKER_LOG
 		echo "[$(date "+%F %T")] It will proceed to download it." >> $YTADSBLOCKER_LOG
-		curl -0s $YTADSBLOCKER_URL > /tmp/${SCRIPT_NAME}.${NEW_VERSION}
+		curl -0s $YTADSBLOCKER_GIT > /tmp/${SCRIPT_NAME}.${NEW_VERSION}
 		echo "[$(date "+%F %T")] New version downloaded. You can find the new script at /tmp." >> $YTADSBLOCKER_LOG
 	else
 		echo "[$(date "+%F %T")] Nothing to do." >> $YTADSBLOCKER_LOG
@@ -195,5 +216,5 @@ case "$1" in
 	"start"     ) Start 	;;
 	"stop"      ) Stop 		;;
 	"uninstall" ) Uninstall ;;
-	*           ) echo "That option does not exists. Usage. /$SCRIPT_NAME [ install | start | stop | uninstall ]";;
+	*           ) echo "That option does not exists. Usage: ./$SCRIPT_NAME [ install | start | stop | uninstall ]";;
 esac
