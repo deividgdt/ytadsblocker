@@ -104,10 +104,10 @@ function Install() {
 				echo "[$(date "+%F %T")] New subdomain to add: $YTD" >> $YTADSBLOCKER_LOG 
 			done
 
-			pihole -b $ALL_DOMAINS
+			pihole blacklist $ALL_DOMAINS
 
 			N_DOM=$(cat /tmp/pihole.log* | egrep --only-matching "r([0-9]{1,2})[^-].*\.googlevideo\.com" | sort | uniq | wc --lines)
-			sudo pihole -g
+			sudo pihole updateGravity
 			echo -e "${TAGOK} OK. $N_DOM subdomains added"
 		else
 			echo -e "${TAGWARN} No subdomains to add at the moment."
@@ -182,14 +182,14 @@ function Stop() {
 
 function Uninstall() {
 
-	echo "Uninstalling..."
-	systemctl disable ytadsblocker
-	rm -f ${SERVICE_PATH}/${SERVICE_NAME}
-	rm -f ${YTADSBLOCKER_LOG}
-	egrep -v "r([0-9]{1,2})[^-].*\.googlevideo\.com" ${BLACKLST} > ${BLACKLST}.new
-	mv -f ${BLACKLST}.new ${BLACKLST}
-	pihole -g
-	echo "YouTube Ads Blocker Uninstalled"
+	echo -e "${TAGINFO} Uninstalling YouTube Ads Blocker. Wait..."
+	systemctl disable ytadsblocker 1> /dev/null 2>&1
+	if [ -f ${SERVICE_PATH}/${SERVICE_NAME} ]; then rm --force ${SERVICE_PATH}/${SERVICE_NAME}; fi
+	if [ -f ${YTADSBLOCKER_LOG} ]; then rm --force ${YTADSBLOCKER_LOG}; fi
+	egrep --invert-match "r([0-9]{1,2})[^-].*\.googlevideo\.com" ${BLACKLST} > ${BLACKLST}.new
+	mv --force ${BLACKLST}.new ${BLACKLST}
+	pihole updateGravity
+	echo -e "${TAGOK} YouTube Ads Blocker Uninstalled"
 	kill -9 `pgrep ytadsblocker`
 	
 
