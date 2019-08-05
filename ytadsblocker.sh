@@ -2,7 +2,7 @@
 
 # This script was made in order to block all the Youtube's advertisement in Pi-Hole
 
-YTADSBLOCKER_VERSION="2.1"
+YTADSBLOCKER_VERSION="2.2"
 YTADSBLOCKER_LOG="/var/log/ytadsblocker.log"
 YTADSBLOCKER_GIT="https://raw.githubusercontent.com/deividgdt/ytadsblocker/master/ytadsblocker.sh"
 VERSIONCHECKER_TIME="260"
@@ -97,7 +97,7 @@ function Install() {
 		fi
 		
 		echo -e "${TAGINFO} Adding googlevideo.com subdomains..."; sleep 1
-		ALL_DOMAINS=$(cat /tmp/pihole.log* | egrep -o "r([0-9]{1,2})[^-].*\.googlevideo\.com" /var/log/pihole.log | sort | uniq)
+		ALL_DOMAINS=$(cat /tmp/pihole.log* | egrep --only-matching "r([0-9]{1,2})[^-].*\.googlevideo\.com" | sort | uniq)
 		
 		if [ ! -z "${ALL_DOMAINS}" ]; then
 			for YTD in $ALL_DOMAINS; do
@@ -106,7 +106,7 @@ function Install() {
 
 			pihole -b $ALL_DOMAINS
 
-			N_DOM=$(cat /tmp/pihole.log* | egrep -o "r([0-9]{1,2})[^-].*\.googlevideo\.com" /var/log/pihole.log | sort | uniq | wc -l)
+			N_DOM=$(cat /tmp/pihole.log* | egrep --only-matching "r([0-9]{1,2})[^-].*\.googlevideo\.com" | sort | uniq | wc --lines)
 			sudo pihole -g
 			echo -e "${TAGOK} OK. $N_DOM subdomains added"
 		else
@@ -114,7 +114,7 @@ function Install() {
 		fi
 		
 		echo -ne "${TAGINFO} Deleting temp..."; sleep 1
-		rm -f /tmp/pihole.log*
+		rm --force /tmp/pihole.log*
 		echo "OK. Temp deleted."; sleep 1
 		echo -e "${TAGOK} Youtube Ads Blocker: INSTALLED..."; sleep 1
 		echo ""
@@ -141,7 +141,7 @@ function Start() {
 		
 		echo "[$(date "+%F %T")] Checking..." >> $YTADSBLOCKER_LOG
 		
-		YT_DOMAINS=$(egrep -o "r([0-9]{1,2})[^-].*\.googlevideo\.com" /var/log/pihole.log | sort | uniq)
+		YT_DOMAINS=$(cat /var/log/pihole.log | egrep --only-matching "r([0-9]{1,2})[^-].*\.googlevideo\.com" | sort | uniq)
 		CURRENT_DOMAINS=$(cat $BLACKLST)
 		NEW_DOMAINS=
 		
@@ -197,14 +197,14 @@ function Uninstall() {
 
 function VersionChecker() {
 
-	NEW_VERSION=$(curl -0s $YTADSBLOCKER_GIT | egrep -x "YTADSBLOCKER_VERSION=\"[1-9]{1,2}\.[1-9]{1,2}\"" | cut -f2 -d"=" | sed 's,",,g')
+	NEW_VERSION=$(curl --http1.0 --silent $YTADSBLOCKER_GIT | egrep --line-regexp "YTADSBLOCKER_VERSION=\"[1-9]{1,2}\.[1-9]{1,2}\"" | cut --fields=2 --delimiter="=" | sed 's,",,g')
 
 	echo "[$(date "+%F %T")] Checking if there is any new version." >> $YTADSBLOCKER_LOG
 
 	if [[ "${YTADSBLOCKER_VERSION}" != "${NEW_VERSION}" ]]; then
 		echo "[$(date "+%F %T")] There is a new version: ${NEW_VERSION}. Current version: ${YTADSBLOCKER_VERSION}" >> $YTADSBLOCKER_LOG
 		echo "[$(date "+%F %T")] It will proceed to download it." >> $YTADSBLOCKER_LOG
-		curl -0s $YTADSBLOCKER_GIT > /tmp/${SCRIPT_NAME}.${NEW_VERSION}
+		curl --http1.0 --silent $YTADSBLOCKER_GIT > /tmp/${SCRIPT_NAME}.${NEW_VERSION}
 		echo "[$(date "+%F %T")] New version downloaded. You can find the new script at /tmp." >> $YTADSBLOCKER_LOG
 	else
 		echo "[$(date "+%F %T")] Nothing to do." >> $YTADSBLOCKER_LOG
