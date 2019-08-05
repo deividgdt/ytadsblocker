@@ -1,4 +1,4 @@
-# Youtube Ads Blocker
+# Pi-Hole - Youtube Ads Blocker
 
 ![](https://deividsdocs.files.wordpress.com/2018/11/ytadsblocker31.jpg)
 
@@ -12,5 +12,5 @@ This script will block all the Youtube's advertisement in your network. It must 
 - Start the service and that's it
   `systemctl start ytadsblocker`
 
-### More info
+## More info
 - Instalación del script en [Español en mi blog](https://deividsdocs.wordpress.com/2018/11/28/bloquear-anuncios-de-youtube-en-pihole/)
