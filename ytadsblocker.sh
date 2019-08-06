@@ -2,7 +2,7 @@
 
 # This script was made in order to block all the Youtube's advertisement in Pi-Hole
 
-YTADSBLOCKER_VERSION="2.2"
+YTADSBLOCKER_VERSION="2.3"
 YTADSBLOCKER_LOG="/var/log/ytadsblocker.log"
 YTADSBLOCKER_GIT="https://raw.githubusercontent.com/deividgdt/ytadsblocker/master/ytadsblocker.sh"
 VERSIONCHECKER_TIME="260"
@@ -10,6 +10,7 @@ SLEEPTIME="240"
 DIR_LOG="/var/log"
 PI_LOG="/var/log/pihole.log"
 BLACKLST="/etc/pihole/blacklist.txt"
+BLACKLST_TMP="/etc/pihole/blacklist.txt.TMP"
 BLACKLST_BKP="/etc/pihole/blacklist.txt.BKP"
 SERVICE_PATH="/lib/systemd/system"
 SERVICE_NAME="ytadsblocker.service"
@@ -79,6 +80,8 @@ function Install() {
 		systemctl enable ytadsblocker 1> /dev/null 2>&1
 		echo "OK."
 
+		echo "[$(date "+%F %T")] Youtube Ads Blocker has been installed. Welcome!" >> $YTADSBLOCKER_LOG 
+
 		echo -e "${TAGINFO} Searching googlevideo.com subdomains inside the Pi-Hole's logs..."; sleep 1    
 		
 		cp $DIR_LOG/pihole.log* /tmp
@@ -97,16 +100,18 @@ function Install() {
 		fi
 		
 		echo -e "${TAGINFO} Adding googlevideo.com subdomains..."; sleep 1
+		echo "[$(date "+%F %T")] Searching Googlevideo's subdomains in the logs..." >> $YTADSBLOCKER_LOG 
 		ALL_DOMAINS=$(cat /tmp/pihole.log* | egrep --only-matching "r([0-9]{1,2})[^-].*\.googlevideo\.com" | sort | uniq)
-		
+		N_DOM=$(cat /tmp/pihole.log* | egrep --only-matching "r([0-9]{1,2})[^-].*\.googlevideo\.com" | sort | uniq | wc --lines)
+		echo "[$(date "+%F %T")] We have found $N_DOM subdomain/s..." >> $YTADSBLOCKER_LOG 
+
 		if [ ! -z "${ALL_DOMAINS}" ]; then
 			for YTD in $ALL_DOMAINS; do
-				echo "[$(date "+%F %T")] New subdomain to add: $YTD" >> $YTADSBLOCKER_LOG 
+				echo "[$(date "+%F %T")] Adding the subdomain: $YTD" >> $YTADSBLOCKER_LOG 
 			done
 
 			pihole blacklist $ALL_DOMAINS
 
-			N_DOM=$(cat /tmp/pihole.log* | egrep --only-matching "r([0-9]{1,2})[^-].*\.googlevideo\.com" | sort | uniq | wc --lines)
 			sudo pihole updateGravity
 			echo -e "${TAGOK} OK. $N_DOM subdomains added"
 		else
@@ -139,7 +144,7 @@ function Start() {
 
 	while true; do
 		
-		echo "[$(date "+%F %T")] Checking..." >> $YTADSBLOCKER_LOG
+		echo "[$(date "+%F %T")] Checking ${PI_LOG}..." >> $YTADSBLOCKER_LOG
 		
 		YT_DOMAINS=$(cat /var/log/pihole.log | egrep --only-matching "r([0-9]{1,2})[^-].*\.googlevideo\.com" | sort | uniq)
 		CURRENT_DOMAINS=$(cat $BLACKLST)
@@ -155,7 +160,7 @@ function Start() {
 		if [ -z $NEW_DOMAINS ]; then
 			echo "[$(date "+%F %T")] No new subdomains to added." >> $YTADSBLOCKER_LOG
 		else
-			pihole -b $NEW_DOMAINS
+			pihole blacklist $NEW_DOMAINS
 			echo "[$(date "+%F %T")] All the new subdomains added." >> $YTADSBLOCKER_LOG
 		fi
 		
@@ -183,15 +188,35 @@ function Stop() {
 function Uninstall() {
 
 	echo -e "${TAGINFO} Uninstalling YouTube Ads Blocker. Wait..."
-	systemctl disable ytadsblocker 1> /dev/null 2>&1
-	if [ -f ${SERVICE_PATH}/${SERVICE_NAME} ]; then rm --force ${SERVICE_PATH}/${SERVICE_NAME}; fi
-	if [ -f ${YTADSBLOCKER_LOG} ]; then rm --force ${YTADSBLOCKER_LOG}; fi
-	egrep --invert-match "r([0-9]{1,2})[^-].*\.googlevideo\.com" ${BLACKLST} > ${BLACKLST}.new
-	mv --force ${BLACKLST}.new ${BLACKLST}
-	pihole updateGravity
-	echo -e "${TAGOK} YouTube Ads Blocker Uninstalled"
-	kill -9 `pgrep ytadsblocker`
 	
+	echo -e "${TAGINFO} Disabling the service..."
+	systemctl --now disable ytadsblocker 1> /dev/null 2>&1
+	systemctl daemon-reload
+
+	if [ -f ${SERVICE_PATH}/${SERVICE_NAME} ]; then 
+		echo -e "${TAGINFO} Deleting the service file..."
+		rm --force ${SERVICE_PATH}/${SERVICE_NAME};
+	fi
+	
+	if [ -f ${YTADSBLOCKER_LOG} ]; then
+		echo -e "${TAGINFO} Deleting the log file..."
+		rm --force ${YTADSBLOCKER_LOG}; 
+	fi
+	
+
+	if [[ $(egrep --invert-match "r([0-9]{1,2})[^-].*\.googlevideo\.com" ${BLACKLST}) ]]; then
+		echo -e "${TAGINFO} Deleting the Googlevideo's subdomains from ${BLACKLST}"
+		egrep --invert-match "r([0-9]{1,2})[^-].*\.googlevideo\.com" ${BLACKLST} > ${BLACKLST_TMP}
+		mv --force ${BLACKLST_TMP} ${BLACKLST}	
+	else
+		>${BLACKLST}
+	fi
+	
+	echo -e "${TAGINFO} Updating the Gravity in the Pi-hole..."
+	pihole updateGravity
+	
+	echo -e "${TAGOK} YouTube Ads Blocker Uninstalled. Bye"
+	kill -9 `pgrep ytadsblocker`
 
 }
 
@@ -214,7 +239,7 @@ function VersionChecker() {
 case "$1" in
 	"install"   ) Install 	;;
 	"start"     ) Start 	;;
-	"stop"      ) Stop 		;;
+	"stop"      ) Stop 	;;
 	"uninstall" ) Uninstall ;;
 	*           ) echo "That option does not exists. Usage: ./$SCRIPT_NAME [ install | start | stop | uninstall ]";;
 esac
