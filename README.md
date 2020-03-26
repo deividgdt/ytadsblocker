@@ -1,15 +1,17 @@
 # Pi-Hole - Youtube Ads Blocker
 
-![](https://deividsdocs.files.wordpress.com/2018/11/ytadsblocker31.jpg)
+![](https://deividsdocs.files.wordpress.com/2019/01/ytdasblocker.png)
 
 This script will block all the Youtube's advertisement in your network. It must be used with Pi-Hole.
 
 ## Installation
 - Download the script 
   `# git clone https://github.com/deividgdt/ytadsblocker.git`
-- Make it executable
+- Move the directory
+  `# cd ytadsblocker`
+- Make the script executable
   `# chmod a+x ytadsblocker.sh`
-- Execute the script with the option: install
+- Execute the script as root with the option: install
   `# ./ytadsblocker.sh install`
 - Start the service and that's it
   `# systemctl start ytadsblocker`
