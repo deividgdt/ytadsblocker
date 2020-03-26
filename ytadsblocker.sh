@@ -37,6 +37,7 @@ set -e
 function CheckUser() {
 	if [[ "$(id -u $(whoami))" != "0" ]]; then
 		echo -e "${TAGERR} $(whoami) is not a valid user. The installation must be executed by the user: root."
+		exit 1;
 	else
 		echo -e "${TAGOK} $(whoami) is a valid user."
 	fi
