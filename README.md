@@ -7,7 +7,7 @@ This script will block all the Youtube's advertisement in your network. It must 
 ## Installation
 - Download the script 
   `# git clone https://github.com/deividgdt/ytadsblocker.git`
-- Move the directory
+- Move to the directory
   `# cd ytadsblocker`
 - Make the script executable
   `# chmod a+x ytadsblocker.sh`
