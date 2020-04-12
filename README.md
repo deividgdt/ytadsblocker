@@ -18,3 +18,4 @@ This script will block all the Youtube's advertisement in your network. It must 
 
 ## More info
 - Instalación del script en [Español en mi blog](https://deividsdocs.wordpress.com/2018/11/28/bloquear-anuncios-de-youtube-en-pihole/)
+- Buy me a coffe [![ko-fi](https://www.ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/U7U01LTQB)
