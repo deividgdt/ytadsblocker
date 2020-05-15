@@ -2,16 +2,14 @@
 
 # This script was made in order to block all the Youtube's advertisement in Pi-Hole
 
-YTADSBLOCKER_VERSION="2.4"
+YTADSBLOCKER_VERSION="3.0"
 YTADSBLOCKER_LOG="/var/log/ytadsblocker.log"
 YTADSBLOCKER_GIT="https://raw.githubusercontent.com/deividgdt/ytadsblocker/master/ytadsblocker.sh"
 VERSIONCHECKER_TIME="260"
 SLEEPTIME="240"
 DIR_LOG="/var/log"
 PI_LOG="/var/log/pihole.log"
-BLACKLST="/etc/pihole/blacklist.txt"
-BLACKLST_TMP="/etc/pihole/blacklist.txt.TMP"
-BLACKLST_BKP="/etc/pihole/blacklist.txt.BKP"
+GRAVITYDB="/etc/pihole/gravity.db"
 SERVICE_PATH="/lib/systemd/system"
 SERVICE_NAME="ytadsblocker.service"
 SCRIPT_NAME=$(basename $0)
@@ -50,11 +48,9 @@ function Makeservice () {
 [Unit]
 Description=Youtube ads blocker service for Pi-hole
 After=network.target
-
 [Service]
 ExecStart=$PRINTWD/$SCRIPT_NAME start
 ExecStop=$PRINTWD/$SCRIPT_NAME stop
-
 [Install]
 WantedBy=multi-user.target
 	EOF
@@ -79,7 +75,7 @@ function Install() {
 		echo -e "${TAGINFO} Youtube Ads Blocker: INSTALLING..."; sleep 1
 		echo -e "${TAGINFO} If you move the script to a different place, please run it again with the option 'install'";
 		echo -e "${TAGINFO} You can check the logs in: $YTADSBLOCKER_LOG";
-		echo -e "${TAGINFO} All the subdomains will be added to: $BLACKLST";
+		echo -e "${TAGINFO} All the subdomains will be added to the database: $GRAVITYDB";
 		echo -e "${TAGINFO} Every ${SLEEPTIME}s it reads: $PI_LOG"; sleep 3
 		echo ""
 		
@@ -100,29 +96,26 @@ function Install() {
 			gunzip $GZIPFILE; 
 		done
 		
-		if [ -f "${BLACKLST}" ]; then
-			echo -ne "${TAGINFO} Backing up the ${BLACKLST} file..."; sleep 1
-			cp $BLACKLST $BLACKLST_BKP
-			echo "OK. Backup done."
-		else
-			echo -ne "${TAGINFO} Creating the ${BLACKLST} file..."; sleep 1
-			touch $BLACKLST
-			echo "OK. File created."
-		fi
-		
 		echo -e "${TAGINFO} Adding googlevideo.com subdomains..."; sleep 1
 		echo "[$(date "+%F %T")] Searching Googlevideo's subdomains in the logs..." >> $YTADSBLOCKER_LOG 
 		ALL_DOMAINS=$(cat /tmp/pihole.log* | egrep --only-matching "r([0-9]{1,2})[^-].*\.googlevideo\.com" | sort | uniq)
 		N_DOM=$(cat /tmp/pihole.log* | egrep --only-matching "r([0-9]{1,2})[^-].*\.googlevideo\.com" | sort | uniq | wc --lines)
 		echo "[$(date "+%F %T")] We have found $N_DOM subdomain/s..." >> $YTADSBLOCKER_LOG 
-
+		
+		echo -e "${TAGINFO} Configuring the database: $GRAVITYDB ..."; sleep 1
+		
+		LASTGROUPID=$(sqlite3 "${GRAVITYDB}" "SELECT MAX(id) FROM 'group';")
+		NEWGROUPID=$((${LASTGROUPID} + 1))
+		sqlite3 "${GRAVITYDB}" "INSERT INTO 'group' (id, name, description) VALUES (${NEWGROUPID}, 'YTADSBLOCKER', 'Youtube ADS Blocker');"
+		
 		if [ ! -z "${ALL_DOMAINS}" ]; then
 			for YTD in $ALL_DOMAINS; do
 				echo "[$(date "+%F %T")] Adding the subdomain: $YTD" >> $YTADSBLOCKER_LOG 
+				sqlite3 "${GRAVITYDB}"  """INSERT INTO domainlist (type, domain, comment) VALUES (1, '${YTD}', 'Blacklisted by ytadsblocker');"""
 			done
-
-			pihole blacklist $ALL_DOMAINS
-
+			
+			sqlite3 "${GRAVITYDB}"  "UPDATE domainlist_by_group SET group_id=${NEWGROUPID} WHERE domainlist_id IN (SELECT id FROM domainlist WHERE comment = 'Blacklisted by ytadsblocker');"
+			
 			sudo pihole updateGravity
 			echo -e "${TAGOK} OK. $N_DOM subdomains added"
 		else
@@ -148,30 +141,41 @@ function Install() {
 
 function Start() {
 	
+	CheckUser #We check if the root user is executing the script
+	
 	echo "Youtube Ads Blocker Started"
 	echo "Check the $YTADSBLOCKER_LOG file in order to get further information."
 
 	echo "[$(date "+%F %T")] Youtube Ads Blocker Started" >> $YTADSBLOCKER_LOG
-
-	while true; do
+	
+	GROUPID=$(sqlite3 "${GRAVITYDB}"  "SELECT id FROM 'group' WHERE name = 'YTADSBLOCKER';")
 		
+	if [ -z ${GROUPID} ]; then
+		echo -e "${TAGERR} The YTADSBLOCKER groupd ID does not exists in the database."
+		exit 1;
+	fi
+	
+	while true; do
 		echo "[$(date "+%F %T")] Checking ${PI_LOG}..." >> $YTADSBLOCKER_LOG
 		
 		YT_DOMAINS=$(cat /var/log/pihole.log | egrep --only-matching "r([0-9]{1,2})[^-].*\.googlevideo\.com" | sort | uniq)
-		CURRENT_DOMAINS=$(cat $BLACKLST)
+		CURRENT_DOMAINS=$(sqlite3 "${GRAVITYDB}"  "SELECT domain FROM domainlist WHERE comment = 'Blacklisted by ytadsblocker';")
 		NEW_DOMAINS=
 		
 		for YTD in $YT_DOMAINS; do
-			if [[ ! $( grep "$YTD" "$BLACKLST" ) ]]; then
+			CHECK_NEW_DOMAIN=$(sqlite3 "${GRAVITYDB}"  """SELECT domain FROM domainlist WHERE comment = 'Blacklisted by ytadsblocker' AND domain = '${YTD}';""")
+			if [[ -z ${CHECK_NEW_DOMAIN} ]]; then
 				NEW_DOMAINS="$NEW_DOMAINS $YTD"
 				echo "[$(date "+%F %T")] New subdomain to add: $YTD" >> $YTADSBLOCKER_LOG
+				sqlite3 "${GRAVITYDB}"  """INSERT INTO domainlist (type, domain, comment) VALUES (1, '${YTD}', 'Blacklisted by ytadsblocker');"""
 			fi
 		done
+		
+		sqlite3 "${GRAVITYDB}"  "UPDATE domainlist_by_group SET group_id=${GROUPID} WHERE domainlist_id IN (SELECT id FROM domainlist WHERE comment = 'Blacklisted by ytadsblocker');"
 		
 		if [ -z $NEW_DOMAINS ]; then
 			echo "[$(date "+%F %T")] No new subdomains to added." >> $YTADSBLOCKER_LOG
 		else
-			pihole blacklist $NEW_DOMAINS
 			echo "[$(date "+%F %T")] All the new subdomains added." >> $YTADSBLOCKER_LOG
 		fi
 		
@@ -216,15 +220,10 @@ function Uninstall() {
 		rm --force ${YTADSBLOCKER_LOG}; 
 	fi
 	
-
-	if [[ $(egrep --invert-match "r([0-9]{1,2})[^-].*\.googlevideo\.com" ${BLACKLST}) ]]; then
-		echo -e "${TAGINFO} Deleting the Googlevideo's subdomains from ${BLACKLST}"
-		egrep --invert-match "r([0-9]{1,2})[^-].*\.googlevideo\.com" ${BLACKLST} > ${BLACKLST_TMP}
-		mv --force ${BLACKLST_TMP} ${BLACKLST}	
-	else
-		>${BLACKLST}
-	fi
-	
+	echo -e "${TAGINFO} Deleting the Googlevideo's subdomains from ${BLACKLST}"
+	sqlite3 "${GRAVITYDB}"  "DELETE FROM domainlist WHERE comment = 'Blacklisted by ytadsblocker';"
+	sqlite3 "${GRAVITYDB}"  "DELETE FROM 'group' WHERE name = 'YTADSBLOCKER';"
+		
 	echo -e "${TAGINFO} Updating the Gravity in the Pi-hole..."
 	pihole updateGravity
 	
