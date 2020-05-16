@@ -1,6 +1,6 @@
 # Pi-Hole - Youtube Ads Blocker
 
-![](https://deividsdocs.files.wordpress.com/2019/01/ytdasblocker.png)
+![](https://deividsdocs.files.wordpress.com/2020/05/image.png)
 
 This script will block all the Youtube's advertisement in your network. It must be used with Pi-Hole.
 
