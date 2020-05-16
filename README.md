@@ -22,6 +22,7 @@ This script will block all the Youtube's advertisement in your network. It must 
   `# systemctl start ytadsblocker`
 
 ## More info
+- Version 3.0 just works with Pihole 5.0 or newer. If you're running a lower version of Pihole, you must upgrade it.
 - Instalación del script en [mi blog (ES)](https://deividsdocs.wordpress.com/2018/11/28/bloquear-anuncios-de-youtube-en-pihole/)
 - Installation of the script in [my blog (EN)](https://deividsdocs.wordpress.com/2020/04/15/script-to-block-youtube-advertisements-in-pi-hole/)
 
