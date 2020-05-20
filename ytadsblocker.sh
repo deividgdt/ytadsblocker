@@ -2,7 +2,7 @@
 
 # This script was made in order to block all the Youtube's advertisement in Pi-Hole
 
-YTADSBLOCKER_VERSION="3.2"
+YTADSBLOCKER_VERSION="3.3"
 YTADSBLOCKER_LOG="/var/log/ytadsblocker.log"
 YTADSBLOCKER_GIT="https://raw.githubusercontent.com/deividgdt/ytadsblocker/master/ytadsblocker.sh"
 VERSIONCHECKER_TIME="260"
@@ -89,7 +89,12 @@ function Database () {
 			sqlite3 "${GRAVITYDB}" "INSERT INTO 'group' (id, name, description) VALUES (${GROUPID}, 'YTADSBLOCKER', 'Youtube ADS Blocker');" 2>> $YTADSBLOCKER_LOG 
 		;;
 		"insertDomain")
-			sqlite3 "${GRAVITYDB}"  """INSERT INTO domainlist (type, domain, comment) VALUES (1, '${DOMAIN}', 'Blacklisted by ytadsblocker');""" 2>>  $YTADSBLOCKER_LOG 
+			if [[ $DOMAIN == *.googlevideo.com ]]; then 
+				echo -e "${TAGINFO} Inserting subdomain: $DOMAIN";
+				sqlite3 "${GRAVITYDB}"  """INSERT INTO domainlist (type, domain, comment) VALUES (1, '${DOMAIN}', 'Blacklisted by ytadsblocker');""" 2>>  $YTADSBLOCKER_LOG 
+			else
+				echo "[$(date "+%F %T")] The subdomain: $DOMAIN has not been inserted, does not looks like a subdomain!!!" >> $YTADSBLOCKER_LOG
+			fi
 		;;
 		"update")
 			sqlite3 "${GRAVITYDB}"  "UPDATE domainlist_by_group SET group_id=${GROUPID} WHERE domainlist_id IN (SELECT id FROM domainlist WHERE comment = 'Blacklisted by ytadsblocker');" 2>>  $YTADSBLOCKER_LOG 
@@ -143,7 +148,8 @@ function Install() {
 			echo "[$(date "+%F %T")] We have found $N_DOM subdomain/s..." >> $YTADSBLOCKER_LOG 
 			for YTD in $ALL_DOMAINS; do
 				echo "[$(date "+%F %T")] Adding the subdomain: ${YTD}" >> $YTADSBLOCKER_LOG 
-				Database "insertDomain" "${YTD}"
+				Database "checkDomain" "${YTD}"
+				if [[ -z ${CHECK_NEW_DOMAIN} ]]; then Database "insertDomain" "${YTD}"; fi
 			done
 			Database "update"
 			pihole updateGravity
@@ -190,6 +196,7 @@ function Start() {
 		
 		YT_DOMAINS=$(cat ${PI_LOG} | egrep --only-matching "r([0-9]{1,2})[^-].*\.googlevideo\.com" | sort | uniq)
 		NEW_DOMAINS=
+		CHECK_NEW_DOMAIN=		   
 		
 		for YTD in $YT_DOMAINS; do
 			
@@ -237,8 +244,14 @@ function Uninstall() {
 
 	echo -e "${TAGINFO} Uninstalling YouTube Ads Blocker. Wait..."
 	
+	echo -e "${TAGINFO} Deleting the Googlevideo's subdomains from ${GRAVITYDB}"
+	Database "delete"
+	
+	echo -e "${TAGINFO} Updating the Gravity in the Pi-hole..."
+	pihole updateGravity
+	
 	echo -e "${TAGINFO} Disabling the service..."
-	systemctl --now disable ytadsblocker 1> /dev/null 2>&1
+	systemctl disable ytadsblocker 1> /dev/null 2>&1
 	systemctl daemon-reload
 
 	if [ -f ${SERVICE_PATH}/${SERVICE_NAME} ]; then 
@@ -250,12 +263,6 @@ function Uninstall() {
 		echo -e "${TAGINFO} Deleting the log file..."
 		rm --force ${YTADSBLOCKER_LOG}; 
 	fi
-	
-	echo -e "${TAGINFO} Deleting the Googlevideo's subdomains from ${GRAVITYDB}"
-	Database "delete"
-		
-	echo -e "${TAGINFO} Updating the Gravity in the Pi-hole..."
-	pihole updateGravity
 	
 	echo -e "${TAGOK} YouTube Ads Blocker Uninstalled. Bye"
 	kill -9 `pgrep ytadsblocker`
