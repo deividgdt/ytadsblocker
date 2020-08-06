@@ -209,7 +209,7 @@ function Start() {
 			fi
 		done
 		
-		if [ -z $NEW_DOMAINS ]; then
+		if [ -z "$NEW_DOMAINS" ]; then
 			echo "[$(date "+%F %T")] No new subdomains to added." >> $YTADSBLOCKER_LOG
 		else
 			echo "[$(date "+%F %T")] Updating database..." >> $YTADSBLOCKER_LOG
