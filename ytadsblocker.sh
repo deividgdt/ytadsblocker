@@ -2,7 +2,7 @@
 
 # This script was made in order to block all the Youtube's advertisement in Pi-Hole
 
-YTADSBLOCKER_VERSION="3.3"
+YTADSBLOCKER_VERSION="3.4"
 YTADSBLOCKER_LOG="/var/log/ytadsblocker.log"
 YTADSBLOCKER_GIT="https://raw.githubusercontent.com/deividgdt/ytadsblocker/master/ytadsblocker.sh"
 VERSIONCHECKER_TIME="260"
@@ -16,6 +16,7 @@ SCRIPT_NAME=$(basename $0)
 PRINTWD=$(pwd)
 SQLITE3BIN=$(whereis -b sqlite3 | cut -f 2 -d" ")
 TEMPDIR="/tmp/ytadsblocker"
+DOCKER_PIHOLE="/etc/docker-pi-hole-version"
 
 # The followings vars are used in order to give some color to
 # the different outputs of the script.
@@ -46,7 +47,6 @@ function Banner () {
 	echo -e "	/_____/_____/\____/\____/_/ |_/_____/_/ |_| v${YTADSBLOCKER_VERSION}${COLOR_CL} by @deividgdt"   
 	echo ""
 	echo -e "${TAGINFO} Youtube Ads Blocker: INSTALLING..."; sleep 1
-	echo -e "${TAGINFO} If you move the script to a different place, please run it again with the option 'install'";
 	echo -e "${TAGINFO} You can check the logs in: $YTADSBLOCKER_LOG";
 	echo -e "${TAGINFO} All the subdomains will be added to the database: $GRAVITYDB";
 	echo -e "${TAGINFO} Every ${SLEEPTIME}s it reads: $PI_LOG"; sleep 3
@@ -59,6 +59,13 @@ function CheckUser() {
 		exit 1;
 	else
 		echo -e "${TAGOK} $(whoami) is a valid user."
+	fi
+}
+
+function CheckDocker() {
+	if [ -f "${DOCKER_PIHOLE}" ]; then
+		echo -e "${TAGINFO} Running on a Docker Container."
+		DOCKER="y"
 	fi
 }
 
@@ -78,7 +85,7 @@ WantedBy=multi-user.target
 
 }
 
-function Database () {
+function Database() {
 	local OPT=$1
 	local DOMAIN="$2"
 	
@@ -91,7 +98,7 @@ function Database () {
 		"insertDomain")
 			if [[ $DOMAIN == *.googlevideo.com ]]; then 
 				echo -e "${TAGINFO} Inserting subdomain: $DOMAIN";
-				sqlite3 "${GRAVITYDB}"  """INSERT INTO domainlist (type, domain, comment) VALUES (1, '${DOMAIN}', 'Blacklisted by ytadsblocker');""" 2>>  $YTADSBLOCKER_LOG 
+				sqlite3 "${GRAVITYDB}"  """INSERT OR IGNORE INTO domainlist (type, domain, comment) VALUES (1, '${DOMAIN}', 'Blacklisted by ytadsblocker');""" 2>>  $YTADSBLOCKER_LOG 
 			else
 				echo "[$(date "+%F %T")] The subdomain: $DOMAIN has not been inserted, does not looks like a subdomain!!!" >> $YTADSBLOCKER_LOG
 			fi
@@ -112,26 +119,16 @@ function Database () {
 	esac
 }
 
+
+
 function Install() {
-	
 	CheckUser #We check if the root user is executing the script
-
-	if [ ! -f $SERVICE_PATH/$SERVICE_NAME ]; then
-		
-		Banner		
-		
-		echo -ne "${TAGINFO} Installing the service..."; sleep 1
-		Makeservice
-		echo "OK. Service installed.";
-
-		echo -ne "${TAGINFO} Enabling the service to start it automatically with the OS."; sleep 1
-		systemctl enable ytadsblocker 1> /dev/null 2>&1
-		echo "OK."
-		echo "[$(date "+%F %T")] Youtube Ads Blocker has been installed. Welcome!" >> $YTADSBLOCKER_LOG 
-
+	CheckDocker #We check if the script is being executed on a Docker Container
+	
+	
+	function ConfigureEnv() {
 		echo -e "${TAGINFO} Configuring the database: $GRAVITYDB ..."; sleep 1
 		Database "create"
-		
 		echo -e "${TAGINFO} Searching googlevideo.com subdomains inside the Pi-Hole's logs..."; sleep 1    
 		mkdir -p ${TEMPDIR}
 		cp $DIR_LOG/pihole.log* ${TEMPDIR}
@@ -139,7 +136,6 @@ function Install() {
 			gunzip $GZIPFILE; 
 		done
 
-		echo -e "${TAGINFO} Searching googlevideo.com subdomains..."; sleep 1
 		echo "[$(date "+%F %T")] Searching Googlevideo's subdomains in the logs..." >> $YTADSBLOCKER_LOG 
 		ALL_DOMAINS=$(cat ${TEMPDIR}/pihole.log* | egrep --only-matching "r([0-9]{1,2})[^-].*\.googlevideo\.com" | sort | uniq)
 		
@@ -161,16 +157,37 @@ function Install() {
 		echo -ne "${TAGINFO} Deleting temp..."; sleep 1
 		rm --force ${TEMPDIR}/pihole.log*
 		echo "OK. Temp deleted."; sleep 1
-		echo -e "${TAGOK} Youtube Ads Blocker: INSTALLED..."; sleep 1
-		echo ""
-		echo -e "${TAGINFO} To start the service execute as follows: systemctl start ytadsblocker"; sleep 1
-
+		
+	}
+	
+	if [[ "${DOCKER}" == "y" ]]; then
+		echo -e "${TAGWARN} Since some system capabilities are not enabled, we can't create a system service on this Docker Container"
+		ConfigureEnv
+		echo -e "${TAGWARN} To start the script just execute it as follows: bash $PRINTWD/$SCRIPT_NAME start &"
+		echo -e "${TAGWARN} To stop the script just execute it as follows: bash $PRINTWD/$SCRIPT_NAME stop"
 	else
-		echo -e "${TAGWARN} Youtube Ads Blocker already installed..."; sleep 1
-		echo -ne "${TAGINFO} Reinstalling the service..."; 
-		Makeservice
-		systemctl daemon-reload
-		echo "OK. Reinstalled."
+		if [ ! -f $SERVICE_PATH/$SERVICE_NAME ]; then		
+			echo -e "${TAGINFO} If you move the script to a different place, please run it again with the option 'install'";
+			echo -ne "${TAGINFO} Installing the service..."; sleep 1
+			Makeservice
+			echo "OK. Service installed.";
+			
+			ConfigureEnv
+			
+			echo -e "${TAGOK} Youtube Ads Blocker: INSTALLED..."; sleep 1
+			echo ""
+			echo -e "${TAGINFO} To start the service execute as follows: systemctl start ytadsblocker"; sleep 1
+			echo -ne "${TAGINFO} Enabling the service to start it automatically with the OS."; sleep 1
+			systemctl enable ytadsblocker 1> /dev/null 2>&1
+			echo "OK."
+			echo "[$(date "+%F %T")] Youtube Ads Blocker has been installed. Welcome!" >> $YTADSBLOCKER_LOG 
+		else
+			echo -e "${TAGWARN} Youtube Ads Blocker already installed..."; sleep 1
+			echo -ne "${TAGINFO} Reinstalling the service..."; 
+			Makeservice
+			systemctl daemon-reload
+			echo "OK. Reinstalled."
+		fi
 	fi
 
 }
@@ -239,7 +256,7 @@ function Stop() {
 }
 
 function Uninstall() {
-
+	CheckDocker #We check if the script is being executed on a Docker Container
 	CheckUser #We check if the root user is executing the script
 
 	echo -e "${TAGINFO} Uninstalling YouTube Ads Blocker. Wait..."
@@ -250,18 +267,20 @@ function Uninstall() {
 	echo -e "${TAGINFO} Updating the Gravity in the Pi-hole..."
 	pihole updateGravity
 	
-	echo -e "${TAGINFO} Disabling the service..."
-	systemctl disable ytadsblocker 1> /dev/null 2>&1
-	systemctl daemon-reload
+	if [[ ! ${DOCKER} ]]; then
+		echo -e "${TAGINFO} Disabling the service..."
+		systemctl disable ytadsblocker 1> /dev/null 2>&1
+		systemctl daemon-reload
 
-	if [ -f ${SERVICE_PATH}/${SERVICE_NAME} ]; then 
-		echo -e "${TAGINFO} Deleting the service file..."
-		rm --force ${SERVICE_PATH}/${SERVICE_NAME};
-	fi
-	
-	if [ -f ${YTADSBLOCKER_LOG} ]; then
-		echo -e "${TAGINFO} Deleting the log file..."
-		rm --force ${YTADSBLOCKER_LOG}; 
+		if [ -f ${SERVICE_PATH}/${SERVICE_NAME} ]; then 
+			echo -e "${TAGINFO} Deleting the service file..."
+			rm --force ${SERVICE_PATH}/${SERVICE_NAME};
+		fi
+		
+		if [ -f ${YTADSBLOCKER_LOG} ]; then
+			echo -e "${TAGINFO} Deleting the log file..."
+			rm --force ${YTADSBLOCKER_LOG}; 
+		fi
 	fi
 	
 	echo -e "${TAGOK} YouTube Ads Blocker Uninstalled. Bye"
@@ -279,9 +298,9 @@ function VersionChecker() {
 }
 
 case "$1" in
-	"install"   ) Install 	;;
-	"start"     ) Start 	;;
-	"stop"      ) Stop 	;;
-	"uninstall" ) Uninstall ;;
+	"install"   ) Banner; Install 	;;
+	"start"     ) Start 			;;
+	"stop"      ) Stop 				;;
+	"uninstall" ) Uninstall			;;
 	*           ) echo "That option does not exists. Usage: ./$SCRIPT_NAME [ install | start | stop | uninstall ]";;
 esac
