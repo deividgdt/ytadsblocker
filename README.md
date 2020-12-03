@@ -21,6 +21,23 @@ This script will block all the Youtube's advertisement in your network. It must 
   
   `# systemctl start ytadsblocker`
 
+## Installation: Pihole container
+If you are going to use the script in a Pihole Docker Container, you must install and start the script as follow:
+
+- Go into the Pihole container
+
+  `wget https://raw.githubusercontent.com/deividgdt/ytadsblocker/master/ytadsblocker.sh`
+
+- Give it execution permission
+
+  `chmod +x ytadsblocker`
+  
+- Install and start the script
+
+  `./ytadsblocker.sh install`
+  
+  `./ytadsblocker.sh start &`
+
 ## Legacy: prior to Pihole 5.0
 
 - Just download the legacy version and follow the same previous steps, changing the name from `ytadsblocker` to `ytadsblocker_legacy`.
