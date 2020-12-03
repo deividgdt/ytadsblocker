@@ -1,3 +1,4 @@
+[![ko-fi](https://www.ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/U7U01LTQB)
 # Pi-Hole - Youtube Ads Blocker
 
 ![](https://deividsdocs.files.wordpress.com/2020/05/image.png)
@@ -47,5 +48,3 @@ If you are going to use the script in a Pihole Docker Container, you must instal
 - Instalación del script en [mi blog (ES)](https://deividsdocs.wordpress.com/2018/11/28/bloquear-anuncios-de-youtube-en-pihole/)
 - Installation of the script in [my blog (EN)](https://deividsdocs.wordpress.com/2020/04/15/script-to-block-youtube-advertisements-in-pi-hole/)
 
-## Buy me a coffe
-[![ko-fi](https://www.ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/U7U01LTQB)
