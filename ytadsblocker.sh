@@ -2,13 +2,14 @@
 
 # This script was made in order to block all the Youtube's advertisement in Pi-Hole
 
-YTADSBLOCKER_VERSION="3.4"
+YTADSBLOCKER_VERSION="3.5"
 YTADSBLOCKER_LOG="/var/log/ytadsblocker.log"
 YTADSBLOCKER_GIT="https://raw.githubusercontent.com/deividgdt/ytadsblocker/master/ytadsblocker.sh"
-VERSIONCHECKER_TIME="260"
-SLEEPTIME="240"
+VERSIONCHECKER_TIME="280"
+SLEEPTIME="300"
 DIR_LOG="/var/log"
 PI_LOG="/var/log/pihole.log"
+GRAVITY_LOG="/var/log/pihole-updateGravity.log"
 GRAVITYDB="/etc/pihole/gravity.db"
 SERVICE_PATH="/lib/systemd/system"
 SERVICE_NAME="ytadsblocker.service"
@@ -46,10 +47,9 @@ function Banner () {
 	echo -e "	 / /_/ / /___/ /_/ / /___/ /| |/ /___/ _, _/ "                  
 	echo -e "	/_____/_____/\____/\____/_/ |_/_____/_/ |_| v${YTADSBLOCKER_VERSION}${COLOR_CL} by @deividgdt"   
 	echo ""
-	echo -e "${TAGINFO} Youtube Ads Blocker: INSTALLING..."; sleep 1
-	echo -e "${TAGINFO} You can check the logs in: $YTADSBLOCKER_LOG";
-	echo -e "${TAGINFO} All the subdomains will be added to the database: $GRAVITYDB";
-	echo -e "${TAGINFO} Every ${SLEEPTIME}s it reads: $PI_LOG"; sleep 3
+	echo -e "${TAGINFO} Youtube Ads Blocker will be installed." 
+	echo 	"	Log file: ${YTADSBLOCKER_LOG}" 
+	echo 	"	Subdomains added to: ${GRAVITYDB}"
 	echo ""
 }
 
@@ -57,14 +57,12 @@ function CheckUser() {
 	if [[ "$(id -u $(whoami))" != "0" ]]; then
 		echo -e "${TAGERR} $(whoami) is not a valid user. The installation must be executed by the user: root."
 		exit 1;
-	else
-		echo -e "${TAGOK} $(whoami) is a valid user."
 	fi
 }
 
 function CheckDocker() {
 	if [ -f "${DOCKER_PIHOLE}" ]; then
-		echo -e "${TAGINFO} Running on a Docker Container."
+		echo -e "${TAGINFO} Docker Container detected."
 		DOCKER="y"
 	fi
 }
@@ -113,8 +111,8 @@ function Database() {
 			CHECK_NEW_DOMAIN=$(sqlite3 "${GRAVITYDB}"  """SELECT domain FROM domainlist WHERE comment = 'Blacklisted by ytadsblocker' AND domain = '${DOMAIN}';""" 2>>  $YTADSBLOCKER_LOG)
 		;;
 		"delete")
-			sqlite3 "${GRAVITYDB}"  "DELETE FROM domainlist WHERE comment = 'Blacklisted by ytadsblocker';" 2>>  $YTADSBLOCKER_LOG 
-			sqlite3 "${GRAVITYDB}"  "DELETE FROM 'group' WHERE name = 'YTADSBLOCKER';" 2>>  $YTADSBLOCKER_LOG 
+			sqlite3 "${GRAVITYDB}"  "DELETE FROM domainlist WHERE comment = 'Blacklisted by ytadsblocker';" 2>>  $YTADSBLOCKER_LOG
+			sqlite3 "${GRAVITYDB}"  "DELETE FROM 'group' WHERE name = 'YTADSBLOCKER';" 2>>  $YTADSBLOCKER_LOG
 		;;
 	esac
 }
@@ -129,7 +127,7 @@ function Install() {
 	function ConfigureEnv() {
 		echo -e "${TAGINFO} Configuring the database: $GRAVITYDB ..."; sleep 1
 		Database "create"
-		echo -e "${TAGINFO} Searching googlevideo.com subdomains inside the Pi-Hole's logs..."; sleep 1    
+		echo -e "${TAGINFO} Searching for googlevideo.com subdomains..."; sleep 1    
 		mkdir -p ${TEMPDIR}
 		cp $DIR_LOG/pihole.log* ${TEMPDIR}
 		for GZIPFILE in $(ls ${TEMPDIR}/pihole.log*gz > /dev/null 2>&1); do 
@@ -148,7 +146,10 @@ function Install() {
 				if [[ -z ${CHECK_NEW_DOMAIN} ]]; then Database "insertDomain" "${YTD}"; fi
 			done
 			Database "update"
-			pihole updateGravity
+			pihole updateGravity > ${GRAVITY_LOG} 2>&1 &
+			echo -ne "${TAGINFO} Wait until we update gravity"
+			while [ ! -z "$(ps -fea | grep updateGravit[y])" ]; do echo -n "."; sleep 1; done
+			echo " Done."
 			echo -e "${TAGOK} OK. $N_DOM subdomains added"
 		else
 			echo -e "${TAGWARN} No subdomains to add at the moment."
@@ -161,10 +162,9 @@ function Install() {
 	}
 	
 	if [[ "${DOCKER}" == "y" ]]; then
-		echo -e "${TAGWARN} Since some system capabilities are not enabled, we can't create a system service on this Docker Container"
+		echo -e "${TAGWARN} YTADSBLOCKER must be start/stop manually"
 		ConfigureEnv
-		echo -e "${TAGWARN} To start the script just execute it as follows: bash $PRINTWD/$SCRIPT_NAME start &"
-		echo -e "${TAGWARN} To stop the script just execute it as follows: bash $PRINTWD/$SCRIPT_NAME stop"
+		echo -e "${TAGWARN} Usage: bash $PRINTWD/$SCRIPT_NAME { start & || stop & }"
 	else
 		if [ ! -f $SERVICE_PATH/$SERVICE_NAME ]; then		
 			echo -e "${TAGINFO} If you move the script to a different place, please run it again with the option 'install'";
@@ -264,8 +264,10 @@ function Uninstall() {
 	echo -e "${TAGINFO} Deleting the Googlevideo's subdomains from ${GRAVITYDB}"
 	Database "delete"
 	
-	echo -e "${TAGINFO} Updating the Gravity in the Pi-hole..."
-	pihole updateGravity
+	pihole updateGravity > ${GRAVITY_LOG} 2>&1 &
+	echo -ne "${TAGINFO} Wait until we update gravity"
+	while [ ! -z "$(ps -fea | grep updateGravit[y])" ]; do echo -n "."; sleep 1; done
+	echo " Done"
 	
 	if [[ ! ${DOCKER} ]]; then
 		echo -e "${TAGINFO} Disabling the service..."
