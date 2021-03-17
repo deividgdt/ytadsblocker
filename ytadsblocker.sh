@@ -2,7 +2,7 @@
 
 # This script was made in order to block all the Youtube's advertisement in Pi-Hole
 
-YTADSBLOCKER_VERSION="3.5"
+YTADSBLOCKER_VERSION="3.5.1"
 YTADSBLOCKER_LOG="/var/log/ytadsblocker.log"
 YTADSBLOCKER_GIT="https://raw.githubusercontent.com/deividgdt/ytadsblocker/master/ytadsblocker.sh"
 VERSIONCHECKER_TIME="280"
@@ -18,6 +18,7 @@ PRINTWD=$(pwd)
 SQLITE3BIN=$(whereis -b sqlite3 | cut -f 2 -d" ")
 TEMPDIR="/tmp/ytadsblocker"
 DOCKER_PIHOLE="/etc/docker-pi-hole-version"
+ROOT_UID=0
 
 # The followings vars are used in order to give some color to
 # the different outputs of the script.
@@ -54,7 +55,7 @@ function Banner () {
 }
 
 function CheckUser() {
-	if [[ "$(id -u $(whoami))" != "0" ]]; then
+	if [[ "$(id -u $(whoami))" != "${ROOT_UID}" ]]; then
 		echo -e "${TAGERR} $(whoami) is not a valid user. The installation must be executed by the user: root."
 		exit 1;
 	fi
@@ -84,10 +85,10 @@ WantedBy=multi-user.target
 }
 
 function Database() {
-	local OPT=$1
+	local OPTION=$1
 	local DOMAIN="$2"
 	
-	case $OPT in
+	case $OPTION in
 		"create")
 			LASTGROUPID=$(sqlite3 "${GRAVITYDB}" "SELECT MAX(id) FROM 'group';" 2>>  $YTADSBLOCKER_LOG )
 			GROUPID=$((${LASTGROUPID} + 1))
