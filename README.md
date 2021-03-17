@@ -51,9 +51,6 @@ If you are going to use the script in a Pihole Docker Container, you must instal
 
   ```sh
   ./ytadsblocker.sh install
-  ```
-  
-  ```sh
   ./ytadsblocker.sh start &
   ```
 
