@@ -2,7 +2,7 @@
 
 # This script was made in order to block all the Youtube's advertisement in Pi-Hole
 
-YTADSBLOCKER_VERSION="3.5.1"
+YTADSBLOCKER_VERSION="3.6"
 YTADSBLOCKER_LOG="/var/log/ytadsblocker.log"
 YTADSBLOCKER_GIT="https://raw.githubusercontent.com/deividgdt/ytadsblocker/master/ytadsblocker.sh"
 VERSIONCHECKER_TIME="280"
@@ -19,6 +19,8 @@ SQLITE3BIN=$(whereis -b sqlite3 | cut -f 2 -d" ")
 TEMPDIR="/tmp/ytadsblocker"
 DOCKER_PIHOLE="/etc/docker-pi-hole-version"
 ROOT_UID=0
+NORMALPATTERN='r([0-9]{1,2})[^-].*\.googlevideo\.com'
+AGGRESSIVEPATTERN='r([0-9]{1,2}).*\.googlevideo\.com'
 
 # The followings vars are used in order to give some color to
 # the different outputs of the script.
@@ -128,6 +130,20 @@ function Install() {
 	function ConfigureEnv() {
 		echo -e "${TAGINFO} Configuring the database: $GRAVITYDB ..."; sleep 1
 		Database "create"
+		
+		read -p "${TAGINFO} Do you want to activate the aggressive mode? be careful, Youtube could stop working (Y/N): " answer
+		case $answer in
+			Y|y)
+				PATTERN=${AGGRESSIVEPATTERN}
+				;;
+			N|n)
+				PATTERN=${NORMALPATTERN}
+				;;
+			*)
+				PATTERN=${NORMALPATTERN}
+				;;
+		esac
+
 		echo -e "${TAGINFO} Searching for googlevideo.com subdomains..."; sleep 1    
 		mkdir -p ${TEMPDIR}
 		cp $DIR_LOG/pihole.log* ${TEMPDIR}
@@ -136,10 +152,10 @@ function Install() {
 		done
 
 		echo "[$(date "+%F %T")] Searching Googlevideo's subdomains in the logs..." >> $YTADSBLOCKER_LOG 
-		ALL_DOMAINS=$(cat ${TEMPDIR}/pihole.log* | egrep --only-matching "r([0-9]{1,2})[^-].*\.googlevideo\.com" | sort | uniq)
+		ALL_DOMAINS=$(cat ${TEMPDIR}/pihole.log* | egrep --only-matching "${PATTERN}" | sort | uniq)
 		
 		if [ ! -z "${ALL_DOMAINS}" ]; then
-			N_DOM=$(cat ${TEMPDIR}/pihole.log* | egrep --only-matching "r([0-9]{1,2})[^-].*\.googlevideo\.com" | sort | uniq | wc --lines)
+			N_DOM=$(cat ${TEMPDIR}/pihole.log* | egrep --only-matching "${PATTERN}" | sort | uniq | wc --lines)
 			echo "[$(date "+%F %T")] We have found $N_DOM subdomain/s..." >> $YTADSBLOCKER_LOG 
 			for YTD in $ALL_DOMAINS; do
 				echo "[$(date "+%F %T")] Adding the subdomain: ${YTD}" >> $YTADSBLOCKER_LOG 
@@ -168,7 +184,7 @@ function Install() {
 		echo -e "${TAGWARN} Usage: bash $PRINTWD/$SCRIPT_NAME { start & || stop & }"
 	else
 		if [ ! -f $SERVICE_PATH/$SERVICE_NAME ]; then		
-			echo -e "${TAGINFO} If you move the script to a different place, please run it again with the option 'install'";
+			echo -e "${TAGINFO} If you move the script to a different place, please execute it again with the option 'install'";
 			echo -ne "${TAGINFO} Installing the service..."; sleep 1
 			Makeservice
 			echo "OK. Service installed.";
@@ -212,7 +228,7 @@ function Start() {
 	while true; do
 		echo "[$(date "+%F %T")] Checking ${PI_LOG}..." >> $YTADSBLOCKER_LOG
 		
-		YT_DOMAINS=$(cat ${PI_LOG} | egrep --only-matching "r([0-9]{1,2})[^-].*\.googlevideo\.com" | sort | uniq)
+		YT_DOMAINS=$(cat ${PI_LOG} | egrep --only-matching "${PATTERN}" | sort | uniq)
 		NEW_DOMAINS=
 		CHECK_NEW_DOMAIN=		   
 		
