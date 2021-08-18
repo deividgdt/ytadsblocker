@@ -56,6 +56,7 @@ If you are going to use the script in a Pihole Docker Container, you must instal
 
 ## Legacy: prior to Pihole 5.0
 
+- First, consider upgrading Pihole to get nice and brand new features
 - Just download the legacy version and follow the same previous steps, changing the name from `ytadsblocker` to `ytadsblocker_legacy`.
 
 ## More info
