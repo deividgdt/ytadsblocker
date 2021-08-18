@@ -131,13 +131,13 @@ function Install() {
 		echo -e "${TAGINFO} Configuring the database: $GRAVITYDB ..."; sleep 1
 		Database "create"
 		
-		read -p -t 10 "${TAGINFO} Do you want to activate the aggressive mode? be careful, Youtube could stop working (Y/N): " answer
+		read -p "${TAGINFO} Do you want to activate the aggressive mode? be careful, Youtube could stop working (Y/N): " answer
 		case $answer in
-			"Y|y")
-				PATTERN=${NORMALPATTERN}
-				;;
-			"N|n")
+			Y|y)
 				PATTERN=${AGGRESSIVEPATTERN}
+				;;
+			N|n)
+				PATTERN=${NORMALPATTERN}
 				;;
 			*)
 				PATTERN=${NORMALPATTERN}
