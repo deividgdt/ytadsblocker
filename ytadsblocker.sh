@@ -168,7 +168,7 @@ function Install() {
 		echo -e "${TAGWARN} Usage: bash $PRINTWD/$SCRIPT_NAME { start & || stop & }"
 	else
 		if [ ! -f $SERVICE_PATH/$SERVICE_NAME ]; then		
-			echo -e "${TAGINFO} If you move the script to a different place, please run it again with the option 'install'";
+			echo -e "${TAGINFO} If you move the script to a different place, please execute it again with the option 'install'";
 			echo -ne "${TAGINFO} Installing the service..."; sleep 1
 			Makeservice
 			echo "OK. Service installed.";
