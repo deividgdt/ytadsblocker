@@ -19,6 +19,8 @@ SQLITE3BIN=$(whereis -b sqlite3 | cut -f 2 -d" ")
 TEMPDIR="/tmp/ytadsblocker"
 DOCKER_PIHOLE="/etc/docker-pi-hole-version"
 ROOT_UID=0
+NORMALPATTERN='r([0-9]{1,2})[^-].*\.googlevideo\.com'
+AGGRESSIVEPATTERN='r([0-9]{1,2}).*\.googlevideo\.com'
 
 # The followings vars are used in order to give some color to
 # the different outputs of the script.
@@ -128,6 +130,20 @@ function Install() {
 	function ConfigureEnv() {
 		echo -e "${TAGINFO} Configuring the database: $GRAVITYDB ..."; sleep 1
 		Database "create"
+		
+		read -p -t 10 "${TAGINFO} Do you want to activate the aggressive mode? be careful, Youtube could stop working (Y/N): " answer
+		case $answer in
+			"Y|y")
+				PATTERN=${NORMALPATTERN}
+				;;
+			"N|n")
+				PATTERN=${AGGRESSIVEPATTERN}
+				;;
+			*)
+				PATTERN=${NORMALPATTERN}
+				;;
+		esac
+
 		echo -e "${TAGINFO} Searching for googlevideo.com subdomains..."; sleep 1    
 		mkdir -p ${TEMPDIR}
 		cp $DIR_LOG/pihole.log* ${TEMPDIR}
@@ -136,10 +152,10 @@ function Install() {
 		done
 
 		echo "[$(date "+%F %T")] Searching Googlevideo's subdomains in the logs..." >> $YTADSBLOCKER_LOG 
-		ALL_DOMAINS=$(cat ${TEMPDIR}/pihole.log* | egrep --only-matching "r([0-9]{1,2})[^-].*\.googlevideo\.com" | sort | uniq)
+		ALL_DOMAINS=$(cat ${TEMPDIR}/pihole.log* | egrep --only-matching "${PATTERN}" | sort | uniq)
 		
 		if [ ! -z "${ALL_DOMAINS}" ]; then
-			N_DOM=$(cat ${TEMPDIR}/pihole.log* | egrep --only-matching "r([0-9]{1,2})[^-].*\.googlevideo\.com" | sort | uniq | wc --lines)
+			N_DOM=$(cat ${TEMPDIR}/pihole.log* | egrep --only-matching "${PATTERN}" | sort | uniq | wc --lines)
 			echo "[$(date "+%F %T")] We have found $N_DOM subdomain/s..." >> $YTADSBLOCKER_LOG 
 			for YTD in $ALL_DOMAINS; do
 				echo "[$(date "+%F %T")] Adding the subdomain: ${YTD}" >> $YTADSBLOCKER_LOG 
@@ -212,7 +228,7 @@ function Start() {
 	while true; do
 		echo "[$(date "+%F %T")] Checking ${PI_LOG}..." >> $YTADSBLOCKER_LOG
 		
-		YT_DOMAINS=$(cat ${PI_LOG} | egrep --only-matching "r([0-9]{1,2})[^-].*\.googlevideo\.com" | sort | uniq)
+		YT_DOMAINS=$(cat ${PI_LOG} | egrep --only-matching "${PATTERN}" | sort | uniq)
 		NEW_DOMAINS=
 		CHECK_NEW_DOMAIN=		   
 		
