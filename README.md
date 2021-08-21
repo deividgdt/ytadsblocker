@@ -26,6 +26,10 @@ This script will block all the Youtube's advertisement in your network. It must 
   ```sh
   ./ytadsblocker.sh install
   ```
+- Answer Yes(Y) if you want to activate the aggressive mode or Not(N) if you don't. The aggressive mode will block every googlevideo's subdomain. Use carefully since this could lead to Youtube stop working.
+  ```sh
+  Do you want to activate the aggressive mode? be careful, Youtube could stop working (Y/N):
+  ```
 - Start the service and that's it
   
   ```sh
