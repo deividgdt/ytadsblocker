@@ -2,7 +2,7 @@
 
 # This script was made in order to block all the Youtube's advertisement in Pi-Hole
 
-YTADSBLOCKER_VERSION="3.6"
+YTADSBLOCKER_VERSION="3.7"
 YTADSBLOCKER_LOG="/var/log/ytadsblocker.log"
 YTADSBLOCKER_GIT="https://raw.githubusercontent.com/deividgdt/ytadsblocker/master/ytadsblocker.sh"
 VERSIONCHECKER_TIME="280"
@@ -17,6 +17,7 @@ SCRIPT_NAME=$(basename $0)
 PRINTWD=$(pwd)
 SQLITE3BIN=$(whereis -b sqlite3 | cut -f 2 -d" ")
 TEMPDIR="/tmp/ytadsblocker"
+CONFIGFILE="/etc/pihole/.ytadsblocker.cfg"
 DOCKER_PIHOLE="/etc/docker-pi-hole-version"
 ROOT_UID=0
 NORMALPATTERN='r([0-9]{1,2})[^-].*\.googlevideo\.com'
@@ -120,6 +121,16 @@ function Database() {
 	esac
 }
 
+function LoadConfiguration(){
+	# We check if the file exists
+	if [ -f ${CONFIGFILE} ]; then
+
+		# First we get the pattern chosen by the user
+		export PATTERN=$(grep 'current_pattern' ${CONFIGFILE} | cut -f 2 -d'=')
+
+	fi
+}
+
 
 
 function Install() {
@@ -135,12 +146,15 @@ function Install() {
 		case $answer in
 			Y|y)
 				PATTERN=${AGGRESSIVEPATTERN}
+				echo "current_pattern=${PATTERN}" >> ${CONFIGFILE}
 				;;
 			N|n)
 				PATTERN=${NORMALPATTERN}
+				echo "current_pattern=${PATTERN}" >> ${CONFIGFILE}
 				;;
 			*)
 				PATTERN=${NORMALPATTERN}
+				echo "current_pattern=${PATTERN}" >> ${CONFIGFILE}
 				;;
 		esac
 
@@ -210,9 +224,10 @@ function Install() {
 }
 
 function Start() {
-	
+
 	CheckUser #We check if the root user is executing the script
-	
+	LoadConfiguration #We load the main configuration from the file ${CONFIGFILE}
+
 	echo "Youtube Ads Blocker Started"
 	echo "Check the $YTADSBLOCKER_LOG file to get further information."
 
@@ -302,6 +317,11 @@ function Uninstall() {
 		fi
 	fi
 	
+	if [ -f ${CONFIGFILE} ]; then
+		echo -e "${TAGINFO} Deleting config file..."
+		rm --force ${CONFIGFILE}
+	fi
+
 	echo -e "${TAGOK} YouTube Ads Blocker Uninstalled. Bye"
 	kill -9 `pgrep ytadsblocker`
 
@@ -323,3 +343,4 @@ case "$1" in
 	"uninstall" ) Uninstall			;;
 	*           ) echo "That option does not exists. Usage: ./$SCRIPT_NAME [ install | start | stop | uninstall ]";;
 esac
+
