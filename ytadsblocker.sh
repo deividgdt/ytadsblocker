@@ -2,7 +2,7 @@
 
 # This script was made in order to block all the Youtube's advertisement in Pi-Hole
 
-YTADSBLOCKER_VERSION="3.7"
+YTADSBLOCKER_VERSION="3.7.1"
 YTADSBLOCKER_LOG="/var/log/ytadsblocker.log"
 YTADSBLOCKER_GIT="https://raw.githubusercontent.com/deividgdt/ytadsblocker/master/ytadsblocker.sh"
 VERSIONCHECKER_TIME="280"
@@ -131,6 +131,25 @@ function LoadConfiguration(){
 	fi
 }
 
+function writeConfiguration(){
+
+	case $patterMode in
+		"aggresive")
+			PATTERN=${AGGRESSIVEPATTERN}
+			echo "current_pattern=${PATTERN}" >> ${CONFIGFILE}
+			;;
+		"normal")
+			PATTERN=${NORMALPATTERN}
+			echo "current_pattern=${PATTERN}" >> ${CONFIGFILE}
+			;;
+		*)
+			PATTERN=${NORMALPATTERN}
+			echo "current_pattern=${PATTERN}" >> ${CONFIGFILE}
+			;;
+	esac
+
+}
+
 
 
 function Install() {
@@ -142,22 +161,9 @@ function Install() {
 		echo -e "${TAGINFO} Configuring the database: $GRAVITYDB ..."; sleep 1
 		Database "create"
 		
-		read -p "${TAGINFO} Do you want to activate the aggressive mode? be careful, Youtube could stop working (Y/N): " answer
-		case $answer in
-			Y|y)
-				PATTERN=${AGGRESSIVEPATTERN}
-				echo "current_pattern=${PATTERN}" >> ${CONFIGFILE}
-				;;
-			N|n)
-				PATTERN=${NORMALPATTERN}
-				echo "current_pattern=${PATTERN}" >> ${CONFIGFILE}
-				;;
-			*)
-				PATTERN=${NORMALPATTERN}
-				echo "current_pattern=${PATTERN}" >> ${CONFIGFILE}
-				;;
-		esac
-
+		# We write the configuration the config file
+		writeConfiguration
+		
 		echo -e "${TAGINFO} Searching for googlevideo.com subdomains..."; sleep 1    
 		mkdir -p ${TEMPDIR}
 		cp $DIR_LOG/pihole.log* ${TEMPDIR}
@@ -336,11 +342,22 @@ function VersionChecker() {
 	fi
 }
 
+
+while getopts "m:" opt; do
+	case "$opt" in
+		m ) 
+			patterMode=$OPTARG	;;
+		\?) 
+			echo "Invalid option. -$OPTARG" 
+			exit 1				;;
+	esac
+done
+
 case "$1" in
 	"install"   ) Banner; Install 	;;
 	"start"     ) Start 			;;
 	"stop"      ) Stop 				;;
 	"uninstall" ) Uninstall			;;
-	*           ) echo "That option does not exists. Usage: ./$SCRIPT_NAME [ install | start | stop | uninstall ]";;
+	*           ) echo "That option does not exists. Usage: ./$SCRIPT_NAME [ install ( -m aggresive | -m normal ) | start | stop | uninstall ] ";;
 esac
 
