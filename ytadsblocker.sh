@@ -361,7 +361,7 @@ case "${action}" in
 	"start"     ) Start 			;;
 	"stop"      ) Stop 				;;
 	"uninstall" ) Uninstall			;;
-	*           ) echo "That option does not exists. Usage: ./${SCRIPT_NAME} -a [ install ( -m aggresive | -m normal ) | start | stop | uninstall ] ";;
+	*           ) echo "That option does not exists. Usage: ./${SCRIPT_NAME} -a [ install ( -m aggressive | -m normal ) | start | stop | uninstall ] ";;
 esac
 
 
