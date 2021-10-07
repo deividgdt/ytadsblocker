@@ -2,7 +2,7 @@
 
 # This script was made in order to block all the Youtube's advertisement in Pi-Hole
 
-YTADSBLOCKER_VERSION="3.7.1"
+YTADSBLOCKER_VERSION="3.7.2"
 YTADSBLOCKER_LOG="/var/log/ytadsblocker.log"
 YTADSBLOCKER_GIT="https://raw.githubusercontent.com/deividgdt/ytadsblocker/master/ytadsblocker.sh"
 VERSIONCHECKER_TIME="280"
@@ -93,48 +93,38 @@ function Database() {
 	
 	case $OPTION in
 		"create")
-			LASTGROUPID=$(sqlite3 "${GRAVITYDB}" "SELECT MAX(id) FROM 'group';" 2>>  $YTADSBLOCKER_LOG )
+			LASTGROUPID=$(sqlite3 "${GRAVITYDB}" "SELECT MAX(id) FROM 'group';" 2>>  ${YTADSBLOCKER_LOG} )
 			GROUPID=$((${LASTGROUPID} + 1))
-			sqlite3 "${GRAVITYDB}" "INSERT INTO 'group' (id, name, description) VALUES (${GROUPID}, 'YTADSBLOCKER', 'Youtube ADS Blocker');" 2>> $YTADSBLOCKER_LOG 
+			sqlite3 "${GRAVITYDB}" "INSERT INTO 'group' (id, name, description) VALUES (${GROUPID}, 'YTADSBLOCKER', 'Youtube ADS Blocker');" 2>> ${YTADSBLOCKER_LOG} 
 		;;
 		"insertDomain")
 			if [[ $DOMAIN == *.googlevideo.com ]]; then 
 				echo -e "${TAGINFO} Inserting subdomain: $DOMAIN";
-				sqlite3 "${GRAVITYDB}"  """INSERT OR IGNORE INTO domainlist (type, domain, comment) VALUES (1, '${DOMAIN}', 'Blacklisted by ytadsblocker');""" 2>>  $YTADSBLOCKER_LOG 
+				sqlite3 "${GRAVITYDB}"  """INSERT OR IGNORE INTO domainlist (type, domain, comment) VALUES (1, '${DOMAIN}', 'Blacklisted by ytadsblocker');""" 2>>  ${YTADSBLOCKER_LOG} 
 			else
-				echo "[$(date "+%F %T")] The subdomain: $DOMAIN has not been inserted, does not looks like a subdomain!!!" >> $YTADSBLOCKER_LOG
+				echo "[$(date "+%F %T")] The subdomain: $DOMAIN has not been inserted, does not looks like a subdomain!!!" >> ${YTADSBLOCKER_LOG}
 			fi
 		;;
 		"update")
-			sqlite3 "${GRAVITYDB}"  "UPDATE domainlist_by_group SET group_id=${GROUPID} WHERE domainlist_id IN (SELECT id FROM domainlist WHERE comment = 'Blacklisted by ytadsblocker');" 2>>  $YTADSBLOCKER_LOG 
+			sqlite3 "${GRAVITYDB}"  "UPDATE domainlist_by_group SET group_id=${GROUPID} WHERE domainlist_id IN (SELECT id FROM domainlist WHERE comment = 'Blacklisted by ytadsblocker');" 2>>  ${YTADSBLOCKER_LOG} 
 		;;
 		"getGroupId")
-			GROUPID=$(sqlite3 "${GRAVITYDB}"  "SELECT id FROM 'group' WHERE name = 'YTADSBLOCKER';" 2>>  $YTADSBLOCKER_LOG )
+			GROUPID=$(sqlite3 "${GRAVITYDB}"  "SELECT id FROM 'group' WHERE name = 'YTADSBLOCKER';" 2>>  ${YTADSBLOCKER_LOG} )
 		;;
 		"checkDomain")
-			CHECK_NEW_DOMAIN=$(sqlite3 "${GRAVITYDB}"  """SELECT domain FROM domainlist WHERE comment = 'Blacklisted by ytadsblocker' AND domain = '${DOMAIN}';""" 2>>  $YTADSBLOCKER_LOG)
+			CHECK_NEW_DOMAIN=$(sqlite3 "${GRAVITYDB}"  """SELECT domain FROM domainlist WHERE comment = 'Blacklisted by ytadsblocker' AND domain = '${DOMAIN}';""" 2>>  ${YTADSBLOCKER_LOG})
 		;;
 		"delete")
-			sqlite3 "${GRAVITYDB}"  "DELETE FROM domainlist WHERE comment = 'Blacklisted by ytadsblocker';" 2>>  $YTADSBLOCKER_LOG
-			sqlite3 "${GRAVITYDB}"  "DELETE FROM 'group' WHERE name = 'YTADSBLOCKER';" 2>>  $YTADSBLOCKER_LOG
+			sqlite3 "${GRAVITYDB}"  "DELETE FROM domainlist WHERE comment = 'Blacklisted by ytadsblocker';" 2>>  ${YTADSBLOCKER_LOG}
+			sqlite3 "${GRAVITYDB}"  "DELETE FROM 'group' WHERE name = 'YTADSBLOCKER';" 2>>  ${YTADSBLOCKER_LOG}
 		;;
 	esac
 }
 
-function LoadConfiguration(){
-	# We check if the file exists
-	if [ -f ${CONFIGFILE} ]; then
-
-		# First we get the pattern chosen by the user
-		export PATTERN=$(grep 'current_pattern' ${CONFIGFILE} | cut -f 2 -d'=')
-
-	fi
-}
-
 function writeConfiguration(){
 
-	case $patterMode in
-		"aggresive")
+	case $patternMode in
+		"aggressive")
 			PATTERN=${AGGRESSIVEPATTERN}
 			echo "current_pattern=${PATTERN}" >> ${CONFIGFILE}
 			;;
@@ -150,7 +140,15 @@ function writeConfiguration(){
 
 }
 
+function LoadConfiguration(){
+	# We check if the file exists
+	if [ -f ${CONFIGFILE} ]; then
 
+		# First we get the pattern chosen by the user
+		export PATTERN=$(grep 'current_pattern' ${CONFIGFILE} | cut -f 2 -d'=')
+
+	fi
+}
 
 function Install() {
 	CheckUser #We check if the root user is executing the script
@@ -171,14 +169,14 @@ function Install() {
 			gunzip $GZIPFILE; 
 		done
 
-		echo "[$(date "+%F %T")] Searching Googlevideo's subdomains in the logs..." >> $YTADSBLOCKER_LOG 
+		echo "[$(date "+%F %T")] Searching Googlevideo's subdomains in the logs..." >> ${YTADSBLOCKER_LOG} 
 		ALL_DOMAINS=$(cat ${TEMPDIR}/pihole.log* | egrep --only-matching "${PATTERN}" | sort | uniq)
 		
 		if [ ! -z "${ALL_DOMAINS}" ]; then
 			N_DOM=$(cat ${TEMPDIR}/pihole.log* | egrep --only-matching "${PATTERN}" | sort | uniq | wc --lines)
-			echo "[$(date "+%F %T")] We have found $N_DOM subdomain/s..." >> $YTADSBLOCKER_LOG 
+			echo "[$(date "+%F %T")] We have found $N_DOM subdomain/s..." >> ${YTADSBLOCKER_LOG} 
 			for YTD in $ALL_DOMAINS; do
-				echo "[$(date "+%F %T")] Adding the subdomain: ${YTD}" >> $YTADSBLOCKER_LOG 
+				echo "[$(date "+%F %T")] Adding the subdomain: ${YTD}" >> ${YTADSBLOCKER_LOG} 
 				Database "checkDomain" "${YTD}"
 				if [[ -z ${CHECK_NEW_DOMAIN} ]]; then Database "insertDomain" "${YTD}"; fi
 			done
@@ -217,7 +215,7 @@ function Install() {
 			echo -ne "${TAGINFO} Enabling the service to start it automatically with the OS."; sleep 1
 			systemctl enable ytadsblocker 1> /dev/null 2>&1
 			echo "OK."
-			echo "[$(date "+%F %T")] Youtube Ads Blocker has been installed. Welcome!" >> $YTADSBLOCKER_LOG 
+			echo "[$(date "+%F %T")] Youtube Ads Blocker has been installed. Welcome!" >> ${YTADSBLOCKER_LOG} 
 		else
 			echo -e "${TAGWARN} Youtube Ads Blocker already installed..."; sleep 1
 			echo -ne "${TAGINFO} Reinstalling the service..."; 
@@ -235,9 +233,9 @@ function Start() {
 	LoadConfiguration #We load the main configuration from the file ${CONFIGFILE}
 
 	echo "Youtube Ads Blocker Started"
-	echo "Check the $YTADSBLOCKER_LOG file to get further information."
+	echo "Check the ${YTADSBLOCKER_LOG} file to get further information."
 
-	echo "[$(date "+%F %T")] Youtube Ads Blocker Started" >> $YTADSBLOCKER_LOG
+	echo "[$(date "+%F %T")] Youtube Ads Blocker Started" >> ${YTADSBLOCKER_LOG}
 	
 	Database "getGroupId"
 		
@@ -247,7 +245,7 @@ function Start() {
 	fi
 	
 	while true; do
-		echo "[$(date "+%F %T")] Checking ${PI_LOG}..." >> $YTADSBLOCKER_LOG
+		echo "[$(date "+%F %T")] Checking ${PI_LOG}..." >> ${YTADSBLOCKER_LOG}
 		
 		YT_DOMAINS=$(cat ${PI_LOG} | egrep --only-matching "${PATTERN}" | sort | uniq)
 		NEW_DOMAINS=
@@ -259,17 +257,17 @@ function Start() {
 
 			if [[ -z ${CHECK_NEW_DOMAIN} ]]; then
 				NEW_DOMAINS="$NEW_DOMAINS $YTD"
-				echo "[$(date "+%F %T")] New subdomain to add: $YTD" >> $YTADSBLOCKER_LOG
+				echo "[$(date "+%F %T")] New subdomain to add: $YTD" >> ${YTADSBLOCKER_LOG}
 				Database "insertDomain" "${YTD}"
 			fi
 		done
 		
 		if [ -z "$NEW_DOMAINS" ]; then
-			echo "[$(date "+%F %T")] No new subdomains to added." >> $YTADSBLOCKER_LOG
+			echo "[$(date "+%F %T")] No new subdomains to added." >> ${YTADSBLOCKER_LOG}
 		else
-			echo "[$(date "+%F %T")] Updating database..." >> $YTADSBLOCKER_LOG
+			echo "[$(date "+%F %T")] Updating database..." >> ${YTADSBLOCKER_LOG}
 			Database "update"
-			echo "[$(date "+%F %T")] All the new subdomains added." >> $YTADSBLOCKER_LOG
+			echo "[$(date "+%F %T")] All the new subdomains added." >> ${YTADSBLOCKER_LOG}
 		fi
 		
 		COUNT=$(($COUNT + 1))
@@ -288,7 +286,7 @@ function Start() {
 function Stop() {
 
 	echo "Youtube Ads Blocker Stopped"
-	echo "[$(date "+%F %T")] Youtube Ads Blocker Stopped" >> $YTADSBLOCKER_LOG
+	echo "[$(date "+%F %T")] Youtube Ads Blocker Stopped" >> ${YTADSBLOCKER_LOG}
 	kill -9 `pgrep ytadsblocker`
 
 }
@@ -338,26 +336,32 @@ function VersionChecker() {
 	NEW_VERSION=$(curl --http1.0 --silent $YTADSBLOCKER_GIT | egrep --line-regexp "YTADSBLOCKER_VERSION=\"[1-9]{1,2}\.[0-9]{1,2}\"" | cut --fields=2 --delimiter="=" | sed 's,",,g')
 
 	if [[ "${YTADSBLOCKER_VERSION}" != "${NEW_VERSION}" ]]; then
-		echo "[$(date "+%F %T")] There is a new version: ${NEW_VERSION}. Current version: ${YTADSBLOCKER_VERSION}" >> $YTADSBLOCKER_LOG
+		echo "[$(date "+%F %T")] There is a new version: ${NEW_VERSION}. Current version: ${YTADSBLOCKER_VERSION}" >> ${YTADSBLOCKER_LOG}
 	fi
 }
 
 
-while getopts "m:" opt; do
-	case "$opt" in
+while getopts "a:m:" opt; do
+	case "${opt}" in
+		a )
+			action=$OPTARG
+			;;
 		m ) 
-			patterMode=$OPTARG	;;
+			patternMode=$OPTARG
+			;;
 		\?) 
 			echo "Invalid option. -$OPTARG" 
-			exit 1				;;
+			exit 1				
+			;;
 	esac
 done
 
-case "$1" in
+case "${action}" in
 	"install"   ) Banner; Install 	;;
 	"start"     ) Start 			;;
 	"stop"      ) Stop 				;;
 	"uninstall" ) Uninstall			;;
-	*           ) echo "That option does not exists. Usage: ./$SCRIPT_NAME [ install ( -m aggresive | -m normal ) | start | stop | uninstall ] ";;
+	*           ) echo "That option does not exists. Usage: ./${SCRIPT_NAME} -a [ install ( -m aggresive | -m normal ) | start | stop | uninstall ] ";;
 esac
+
 
