@@ -21,15 +21,17 @@ This script will block all the Youtube's advertisement in your network. It must 
    ```sh
    chmod a+x ytadsblocker.sh
    ```
-- Execute the script as root with the option: install
+- Execute the script as root with the option: -a install
   
   ```sh
-  ./ytadsblocker.sh install
+  ./ytadsblocker.sh -a install
   ```
-- Answer Yes(Y) if you want to activate the aggressive mode or Not(N) if you don't. The aggressive mode will block every googlevideo's subdomain. Use carefully since this could lead to Youtube stop working.
+  
+- You can install the script using the aggressive mode. The aggressive mode will block every googlevideo's subdomain. Use carefully since this could lead to Youtube stop working.
   ```sh
-  Do you want to activate the aggressive mode? be careful, Youtube could stop working (Y/N):
+  ./ytadsblocker.sh -a install -m aggressive
   ```
+
 - Start the service and that's it
   
   ```sh
@@ -54,8 +56,8 @@ If you are going to use the script in a Pihole Docker Container, you must instal
 - Install and start the script
 
   ```sh
-  ./ytadsblocker.sh install
-  ./ytadsblocker.sh start &
+  ./ytadsblocker.sh -a install
+  ./ytadsblocker.sh -a start &
   ```
 
 ## Legacy: prior to Pihole 5.0
