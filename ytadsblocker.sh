@@ -2,7 +2,7 @@
 
 # This script was made in order to block all the Youtube's advertisement in Pi-Hole
 
-YTADSBLOCKER_VERSION="3.7.2"
+YTADSBLOCKER_VERSION="3.7.3"
 YTADSBLOCKER_LOG="/var/log/ytadsblocker.log"
 YTADSBLOCKER_GIT="https://raw.githubusercontent.com/deividgdt/ytadsblocker/master/ytadsblocker.sh"
 VERSIONCHECKER_TIME="280"
@@ -79,8 +79,8 @@ function Makeservice () {
 Description=Youtube ads blocker service for Pi-hole
 After=network.target
 [Service]
-ExecStart=$PRINTWD/$SCRIPT_NAME start
-ExecStop=$PRINTWD/$SCRIPT_NAME stop
+ExecStart=$PRINTWD/$SCRIPT_NAME -a start
+ExecStop=$PRINTWD/$SCRIPT_NAME -a stop
 [Install]
 WantedBy=multi-user.target
 	EOF
