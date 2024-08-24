@@ -2,7 +2,7 @@
 
 # This script was made in order to block all the Youtube's advertisement in Pi-Hole
 
-YTADSBLOCKER_VERSION="3.7.4"
+YTADSBLOCKER_VERSION="3.8.0"
 YTADSBLOCKER_LOG="/var/log/ytadsblocker.log"
 YTADSBLOCKER_GIT="https://raw.githubusercontent.com/deividgdt/ytadsblocker/master/ytadsblocker.sh"
 VERSIONCHECKER_TIME="280"
@@ -15,7 +15,8 @@ SERVICE_PATH="/lib/systemd/system"
 SERVICE_NAME="ytadsblocker.service"
 SCRIPT_NAME=$(basename $0)
 PRINTWD=$(pwd)
-SQLITE3BIN=$(whereis -b sqlite3 | cut -f 2 -d" ")
+PIHOLEFTLBIN=$(whereis -b pihole-FTL | cut --fields=2 --delimiter=" ")
+SQLITE3BIN="${PIHOLEFTLBIN} sqlite3"
 TEMPDIR="/tmp/ytadsblocker"
 CONFIGFILE="/etc/pihole/.ytadsblocker.cfg"
 DOCKER_PIHOLE="/etc/docker-pi-hole-version"
@@ -93,30 +94,30 @@ function Database() {
 	
 	case $OPTION in
 		"create")
-			LASTGROUPID=$(sqlite3 "${GRAVITYDB}" "SELECT MAX(id) FROM 'group';" 2>>  ${YTADSBLOCKER_LOG} )
+			LASTGROUPID=$(${SQLITE3BIN} "${GRAVITYDB}" "SELECT MAX(id) FROM 'group';" 2>>  ${YTADSBLOCKER_LOG} )
 			GROUPID=$((${LASTGROUPID} + 1))
-			sqlite3 "${GRAVITYDB}" "INSERT INTO 'group' (id, name, description) VALUES (${GROUPID}, 'YTADSBLOCKER', 'Youtube ADS Blocker');" 2>> ${YTADSBLOCKER_LOG} 
+			${SQLITE3BIN} "${GRAVITYDB}" "INSERT INTO 'group' (id, name, description) VALUES (${GROUPID}, 'YTADSBLOCKER', 'Youtube ADS Blocker');" 2>> ${YTADSBLOCKER_LOG} 
 		;;
 		"insertDomain")
 			if [[ $DOMAIN == *.googlevideo.com ]]; then 
 				echo -e "${TAGINFO} Inserting subdomain: $DOMAIN";
-				sqlite3 "${GRAVITYDB}"  """INSERT OR IGNORE INTO domainlist (type, domain, comment) VALUES (1, '${DOMAIN}', 'Blacklisted by ytadsblocker');""" 2>>  ${YTADSBLOCKER_LOG} 
+				${SQLITE3BIN} "${GRAVITYDB}"  """INSERT OR IGNORE INTO domainlist (type, domain, comment) VALUES (1, '${DOMAIN}', 'Blacklisted by ytadsblocker');""" 2>>  ${YTADSBLOCKER_LOG} 
 			else
 				echo "[$(date "+%F %T")] The subdomain: $DOMAIN has not been inserted, does not looks like a subdomain!!!" >> ${YTADSBLOCKER_LOG}
 			fi
 		;;
 		"update")
-			sqlite3 "${GRAVITYDB}"  "UPDATE domainlist_by_group SET group_id=${GROUPID} WHERE domainlist_id IN (SELECT id FROM domainlist WHERE comment = 'Blacklisted by ytadsblocker');" 2>>  ${YTADSBLOCKER_LOG} 
+			${SQLITE3BIN} "${GRAVITYDB}"  "UPDATE domainlist_by_group SET group_id=${GROUPID} WHERE domainlist_id IN (SELECT id FROM domainlist WHERE comment = 'Blacklisted by ytadsblocker');" 2>>  ${YTADSBLOCKER_LOG} 
 		;;
 		"getGroupId")
-			GROUPID=$(sqlite3 "${GRAVITYDB}"  "SELECT id FROM 'group' WHERE name = 'YTADSBLOCKER';" 2>>  ${YTADSBLOCKER_LOG} )
+			GROUPID=$(${SQLITE3BIN} "${GRAVITYDB}"  "SELECT id FROM 'group' WHERE name = 'YTADSBLOCKER';" 2>>  ${YTADSBLOCKER_LOG} )
 		;;
 		"checkDomain")
-			CHECK_NEW_DOMAIN=$(sqlite3 "${GRAVITYDB}"  """SELECT domain FROM domainlist WHERE comment = 'Blacklisted by ytadsblocker' AND domain = '${DOMAIN}';""" 2>>  ${YTADSBLOCKER_LOG})
+			CHECK_NEW_DOMAIN=$(${SQLITE3BIN} "${GRAVITYDB}"  """SELECT domain FROM domainlist WHERE comment = 'Blacklisted by ytadsblocker' AND domain = '${DOMAIN}';""" 2>>  ${YTADSBLOCKER_LOG})
 		;;
 		"delete")
-			sqlite3 "${GRAVITYDB}"  "DELETE FROM domainlist WHERE comment = 'Blacklisted by ytadsblocker';" 2>>  ${YTADSBLOCKER_LOG}
-			sqlite3 "${GRAVITYDB}"  "DELETE FROM 'group' WHERE name = 'YTADSBLOCKER';" 2>>  ${YTADSBLOCKER_LOG}
+			${SQLITE3BIN} "${GRAVITYDB}"  "DELETE FROM domainlist WHERE comment = 'Blacklisted by ytadsblocker';" 2>>  ${YTADSBLOCKER_LOG}
+			${SQLITE3BIN} "${GRAVITYDB}"  "DELETE FROM 'group' WHERE name = 'YTADSBLOCKER';" 2>>  ${YTADSBLOCKER_LOG}
 		;;
 	esac
 }
