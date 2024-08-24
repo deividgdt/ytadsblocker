@@ -2,7 +2,7 @@
 
 # This script was made in order to block all the Youtube's advertisement in Pi-Hole
 
-YTADSBLOCKER_VERSION="3.7.3"
+YTADSBLOCKER_VERSION="3.7.4"
 YTADSBLOCKER_LOG="/var/log/ytadsblocker.log"
 YTADSBLOCKER_GIT="https://raw.githubusercontent.com/deividgdt/ytadsblocker/master/ytadsblocker.sh"
 VERSIONCHECKER_TIME="280"
@@ -170,10 +170,10 @@ function Install() {
 		done
 
 		echo "[$(date "+%F %T")] Searching Googlevideo's subdomains in the logs..." >> ${YTADSBLOCKER_LOG} 
-		ALL_DOMAINS=$(cat ${TEMPDIR}/pihole.log* | egrep --only-matching "${PATTERN}" | sort | uniq)
+		ALL_DOMAINS=$(cat ${TEMPDIR}/pihole.log* | grep -E --only-matching "${PATTERN}" | sort | uniq)
 		
 		if [ ! -z "${ALL_DOMAINS}" ]; then
-			N_DOM=$(cat ${TEMPDIR}/pihole.log* | egrep --only-matching "${PATTERN}" | sort | uniq | wc --lines)
+			N_DOM=$(cat ${TEMPDIR}/pihole.log* | grep -E --only-matching "${PATTERN}" | sort | uniq | wc --lines)
 			echo "[$(date "+%F %T")] We have found $N_DOM subdomain/s..." >> ${YTADSBLOCKER_LOG} 
 			for YTD in $ALL_DOMAINS; do
 				echo "[$(date "+%F %T")] Adding the subdomain: ${YTD}" >> ${YTADSBLOCKER_LOG} 
@@ -247,7 +247,7 @@ function Start() {
 	while true; do
 		echo "[$(date "+%F %T")] Checking ${PI_LOG}..." >> ${YTADSBLOCKER_LOG}
 		
-		YT_DOMAINS=$(cat ${PI_LOG} | egrep --only-matching "${PATTERN}" | sort | uniq)
+		YT_DOMAINS=$(cat ${PI_LOG} | grep -E --only-matching "${PATTERN}" | sort | uniq)
 		NEW_DOMAINS=
 		CHECK_NEW_DOMAIN=		   
 		
@@ -333,7 +333,7 @@ function Uninstall() {
 
 function VersionChecker() {
 
-	NEW_VERSION=$(curl --http1.0 --silent $YTADSBLOCKER_GIT | egrep --line-regexp "YTADSBLOCKER_VERSION=\"[1-9]{1,2}\.[0-9]{1,2}\"" | cut --fields=2 --delimiter="=" | sed 's,",,g')
+	NEW_VERSION=$(curl --http1.0 --silent $YTADSBLOCKER_GIT | grep -E --line-regexp "YTADSBLOCKER_VERSION=\"[1-9]{1,2}\.[0-9]{1,2}\"" | cut --fields=2 --delimiter="=" | sed 's,",,g')
 
 	if [[ "${YTADSBLOCKER_VERSION}" != "${NEW_VERSION}" ]]; then
 		echo "[$(date "+%F %T")] There is a new version: ${NEW_VERSION}. Current version: ${YTADSBLOCKER_VERSION}" >> ${YTADSBLOCKER_LOG}
