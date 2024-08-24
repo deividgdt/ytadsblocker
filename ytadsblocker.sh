@@ -2,7 +2,7 @@
 
 # This script was made in order to block all the Youtube's advertisement in Pi-Hole
 
-YTADSBLOCKER_VERSION="3.8.0"
+YTADSBLOCKER_VERSION="3.8.1"
 YTADSBLOCKER_LOG="/var/log/ytadsblocker.log"
 YTADSBLOCKER_GIT="https://raw.githubusercontent.com/deividgdt/ytadsblocker/master/ytadsblocker.sh"
 VERSIONCHECKER_TIME="280"
@@ -334,7 +334,7 @@ function Uninstall() {
 
 function VersionChecker() {
 
-	NEW_VERSION=$(curl --http1.0 --silent $YTADSBLOCKER_GIT | grep -E --line-regexp "YTADSBLOCKER_VERSION=\"[1-9]{1,2}\.[0-9]{1,2}\"" | cut --fields=2 --delimiter="=" | sed 's,",,g')
+	NEW_VERSION=$(curl --http1.0 --silent $YTADSBLOCKER_GIT | grep -E 'YTADSBLOCKER_VERSION\=\"[0-9]{1,2}\.[0-9]{1,2}\.[0-9]{1,2}\"' | cut --fields=2 --delimiter="=" | sed 's,",,g')
 
 	if [[ "${YTADSBLOCKER_VERSION}" != "${NEW_VERSION}" ]]; then
 		echo "[$(date "+%F %T")] There is a new version: ${NEW_VERSION}. Current version: ${YTADSBLOCKER_VERSION}" >> ${YTADSBLOCKER_LOG}
